@@ -10,15 +10,24 @@ class ChoraleDataset(data.Dataset):
         load_path: path to (processed) dataset file.
         pitch_aug_range: range of random pitch augmentation.
         mask_p: probability that a token is masked.
-        randtok_p: probability that a masked token is replace randomly."""
-    def __init__(self, load_path: str, pitch_aug_range: int = 5, mask_p: float = 0.15, randtok_p: float = 0.1):
+        randtok_p: probability that a masked token is replace randomly.
+    """
+    def __init__(self, load_path: str, pitch_aug_range: int = 5, mask_p: float = 0.15, randtok_p: float = 0.1,
+                 device: str = 'cpu'):
         self.pitch_aug_range = pitch_aug_range
         self.mask_p = mask_p
         self.randtok_p = randtok_p
+        self.device = device
 
-        self.MASK_TOKEN = '<M>'
-        self.STATIC_TOKENS = ['<S>', '<E>', '<T>', '<P>', 's-1', 'a-1', 't-1', 'b-1'] # REMOVE THE -1s
+        # Token information
+        self.STATIC_TOKENS = ['<S>', '<E>', '<M>', '<T>', '<P>', '-1'] 
         self.pitch_range = (21 - pitch_aug_range, 108 + pitch_aug_range)
+        self.token_list =  ['<S>', '<E>', '<M>', '<T>', '<P>', '-1'] + (
+                          list(range(21 - pitch_aug_range, 108 + pitch_aug_range + 1)))
+
+        # Generate key - token dicts
+        self.key_to_token = {i: val for i, val in enumerate(self.token_list)}
+        self.token_to_key = {val: i for i, val in enumerate(self.token_list)}
 
         with open(load_path) as f:
             self.raw = json.load(f)
@@ -38,8 +47,8 @@ class ChoraleDataset(data.Dataset):
                 continue
             
             # Augment pitch
-            tgt[i] = tgt[i][0] + str(pitch_aug + int(tgt[i][1:]))
-            src[i] = src[i][0] + str(pitch_aug + int(src[i][1:]))
+            tgt[i] += pitch_aug
+            src[i] += pitch_aug
 
             # BERT-style masking
             rng_mask = random.uniform(0, 1)
@@ -48,31 +57,32 @@ class ChoraleDataset(data.Dataset):
                 if rng_randtok > self.randtok_p:
                     src[i] = '<M>'
                 else:
-                    src[i] = src[i][0] + str(random.randint(*self.pitch_range))
+                    src[i] = random.randint(*self.pitch_range)
+                    
+        return self._encode(src), self._encode(tgt)
         
-        return src, tgt
-        
-    def _generate_dicts(self):
-        # Implement token <-> int dictionaries
-
-        raise(NotImplementedError)
-        
-    def _encode(self, src, tgt): 
-        """Converts between list[str] and torch.tensor.
+    def _encode(self, seq: list): 
+        """Converts from list[str] to torch.tensor.
         Args:
-            src: masked input.
-            tgt: unmasked target.
+            seq: unencoded sequence.
         Returns:
-            enc_src: src as torch.tensor.
-            enc_tgt: tgt as torch.tensor."""
-
-        raise(NotImplementedError)
-
+            seq_enc: src as torch.tensor.
+        """
+        return torch.tensor([*map(self.token_to_key.get, seq)], dtype=torch.long).to(self.device)
+        
+    def _decode(self, seq_enc: torch.tensor):
+        """Converts torch.tensor to list[str] .
+        Args:
+            seq_enc: encoded sequence.
+        Returns:
+            seq: decoded sequence.
+        """
 
 def test():
     test = ChoraleDataset('../data/processed/jsb16seq.json')
     for i in range(15):
-        print(test[0][0])
+        print(test[i][0])
+        print(test[i][1])
 
 if __name__ == '__main__':
     test()

@@ -16,28 +16,26 @@ class JSBCtoSeq():
         # Slice into seq_len chunks
         bars = []
         for chorale in raw:
-            # Pad
-            chorale
-            bars = bars + [chorale[n*self.seq_len: (n+1)*self.seq_len] for n in range(0, 1 + len(chorale)//self.seq_len)]
+            bars = bars + [chorale[n*self.seq_len: (n+1)*self.seq_len] for n in range(0, 1 + len(chorale)//self.seq_len)] # Make into sliding door?
             
         # Sequentialise and pad
         seq_data = []
         for bar in bars:
             if bar == []:
                 continue
-            # s - soprano; a - alto; t - tenor; b - bass
+            # add tokens for: s - soprano; a - alto; t - tenor; b - bass ? 
             seq = ['<S>']
-            seq.append(f's{bar[0][0]}')
-            seq.append(f'a{bar[0][1]}')
-            seq.append(f't{bar[0][2]}')
-            seq.append(f'b{bar[0][3]}')
+            seq.append(bar[0][0])
+            seq.append(bar[0][1])
+            seq.append(bar[0][2])
+            seq.append(bar[0][3])
             
             for chord in bar[1:]:
                 seq.append('<T>')
-                seq.append(f's{chord[0]}')
-                seq.append(f'a{chord[1]}')
-                seq.append(f't{chord[2]}')
-                seq.append(f'b{chord[3]}')
+                seq.append(chord[0])
+                seq.append(chord[1])
+                seq.append(chord[2])
+                seq.append(chord[3])
 
             seq.append('<E>')
             
