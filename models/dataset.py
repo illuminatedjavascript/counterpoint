@@ -92,14 +92,15 @@ class ChoraleDataset(data.Dataset):
         """
         return torch.tensor([*map(self.token_to_key.get, seq)], dtype=torch.long).to(self.device)
         
-    def _decode(self, seq_enc: torch.tensor):
+    def decode(self, seq_enc: torch.tensor):
         """Converts torch.tensor to list[str] .
         Args:
             seq_enc: encoded sequence.
         Returns:
             seq: decoded sequence.
         """
-        return [*map(self.key_to_token.get, *seq_enc.tolist())]
+        #return [*map(self.key_to_token.get, *seq_enc.tolist())]
+        return [self.key_to_token[key] for key in seq_enc.tolist()]
 
 def test():
     test = ChoraleDataset('../data/processed/jsb16seq.json')

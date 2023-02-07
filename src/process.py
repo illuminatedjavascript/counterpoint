@@ -59,8 +59,9 @@ class JSBCtoSeq():
 
 
 def main():
-    seq_len = 32
+    seq_len = 16
     file = JSBCtoSeq('../data/raw/Jsb16thSeparated.json', f'../data/processed/jsb{seq_len}seq.json', seq_len)
+
 
 if __name__ == '__main__':
     main()

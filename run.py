@@ -5,12 +5,12 @@ from models import model, dataset, train, sample
 
 def main(argp):
     if argp.function == 'train':
-        train_model(argp.model)
+        train_model(argp.model, checkpoint=True) # Remove checkpoint
     elif argp.function == 'sample':
         sample_model(argp.model, argp.load, argp.save)
 
 
-def train_model(model_save_path: str):
+def train_model(model_save_path: str, checkpoint=False):
     # Use CUDA if available
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if device == 'cuda':
@@ -22,11 +22,15 @@ def train_model(model_save_path: str):
     chorale_dataset = dataset.ChoraleDataset('./data/processed/jsb16seq.json') # Change manually 
     model_config = model.ChoraleBertConfig(chorale_dataset)
     chorale_model = model.ChoraleBertModel(model_config)
+
+    if checkpoint == True:
+        chorale_model.load_state_dict(torch.load(model_save_path))
+
     print(f'Initialised model with {sum(p.numel() for p in chorale_model.parameters() if p.requires_grad)} parameters.')
     
     # Train
     trainer = train.Trainer(chorale_model, chorale_dataset, 1e-4)
-    trainer.train(10, 64)
+    trainer.train(200, 64)
     
     # Save
     torch.save(chorale_model.state_dict(), model_save_path)
@@ -37,17 +41,9 @@ def sample_model(model_load_path: str, sample_load_path: str, sample_save_path):
     chorale_dataset = dataset.ChoraleDataset('./data/processed/jsb16seq.json') # Change manually 
     model_config = model.ChoraleBertConfig(chorale_dataset)
     chorale_model = model.ChoraleBertModel(model_config)
-    chorale_model.load_state_dict(model_load_path)
+    chorale_model.load_state_dict(torch.load(model_load_path))
     
-    #test_seq_enc = chorale_dataset._encode(test_seq).reshape(1, -1)
-    #res = chorale_model.forward(test_seq_enc)
-    #
-    #res_argmax = torch.argmax(res, dim=2)
-    #res = chorale_dataset._decode(res_argmax)
-
-    ## REMOVE
-    #utils.to_midi(res, chorale_dataset)
-    ## END
+    sampler = sample.Sampler(chorale_model, chorale_dataset, sample_load_path, sample_save_path)
 
 
 if __name__ == '__main__':
@@ -58,8 +54,8 @@ if __name__ == '__main__':
         help='save/load path for model params',
         default="model_params.txt")
     argp.add_argument('-l', '--load',
-        help='load path for samples',
-        default="samples.json")
+        help='load path for prompts',
+        default="./data/prompts/prompt16.json")
     argp.add_argument('-s', '--save',
         help='save path for midi samples',
         default="./data/output/")
