@@ -1,8 +1,16 @@
+import argparse
 import torch
 from models import model, dataset, train, sample
 
 
-def test():
+def main(argp):
+    if argp.function == 'train':
+        train_model(argp.model)
+    elif argp.function == 'sample':
+        sample_model(argp.model, argp.load, argp.save)
+
+
+def train_model(model_save_path: str):
     # Use CUDA if available
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if device == 'cuda':
@@ -11,42 +19,50 @@ def test():
         print(f"Using {device} device")
 
     # Load
-    chorale_dataset = dataset.ChoraleDataset('./data/processed/jsb16seq.json')
+    chorale_dataset = dataset.ChoraleDataset('./data/processed/jsb16seq.json') # Change manually 
     model_config = model.ChoraleBertConfig(chorale_dataset)
     chorale_model = model.ChoraleBertModel(model_config)
+    print(f'Initialised model with {sum(p.numel() for p in chorale_model.parameters() if p.requires_grad)} parameters.')
     
     # Train
     trainer = train.Trainer(chorale_model, chorale_dataset, 1e-4)
-    trainer.train(200, 64)
+    trainer.train(10, 64)
     
-    # Test
-    chorale_model.eval()
-    test_seq = ["<S>", '<M>', 60, '<M>', '<M>',
-                "<T>", '<M>', 60, '<M>', '<M>', 
-                "<T>", '<M>', 62, '<M>', '<M>', 
-                "<T>", '<M>', 62, '<M>', '<M>', 
-                "<T>", '<M>', 64, '<M>', '<M>', 
-                "<T>", '<M>', 64, '<M>', '<M>', 
-                "<T>", '<M>', 65, '<M>', '<M>', 
-                "<T>", '<M>', 65, '<M>', '<M>', 
-                "<T>", '<M>', 60, '<M>', '<M>', 
-                "<T>", '<M>', 60, '<M>', '<M>', 
-                "<T>", '<M>', 60, '<M>', '<M>', 
-                "<T>", '<M>', 60, '<M>', '<M>', 
-                "<T>", '<M>', 67, '<M>', '<M>', 
-                "<T>", '<M>', 67, '<M>', '<M>', 
-                "<T>", '<M>', 60, '<M>', '<M>', 
-                "<T>", '<M>', 60, '<M>', '<M>', "<E>"]
+    # Save
+    torch.save(chorale_model.state_dict(), model_save_path)
 
-    test_seq_enc = chorale_dataset._encode(test_seq).reshape(1, -1)
-    res = chorale_model.forward(test_seq_enc)
+
+def sample_model(model_load_path: str, sample_load_path: str, sample_save_path):
+    # Load trained model
+    chorale_dataset = dataset.ChoraleDataset('./data/processed/jsb16seq.json') # Change manually 
+    model_config = model.ChoraleBertConfig(chorale_dataset)
+    chorale_model = model.ChoraleBertModel(model_config)
+    chorale_model.load_state_dict(model_load_path)
     
-    res_argmax = torch.argmax(res, dim=2)
-    res = chorale_dataset._decode(res_argmax)
+    #test_seq_enc = chorale_dataset._encode(test_seq).reshape(1, -1)
+    #res = chorale_model.forward(test_seq_enc)
+    #
+    #res_argmax = torch.argmax(res, dim=2)
+    #res = chorale_dataset._decode(res_argmax)
 
-    # REMOVE
-    utils.to_midi(res, chorale_dataset)
-    # END
+    ## REMOVE
+    #utils.to_midi(res, chorale_dataset)
+    ## END
+
 
 if __name__ == '__main__':
-    test()
+    argp = argparse.ArgumentParser()
+    argp.add_argument('function',
+        choices=['train', 'sample'])
+    argp.add_argument('-p', '--model',
+        help='save/load path for model params',
+        default="model_params.txt")
+    argp.add_argument('-l', '--load',
+        help='load path for samples',
+        default="samples.json")
+    argp.add_argument('-s', '--save',
+        help='save path for midi samples',
+        default="./data/output/")
+    argp = argp.parse_args()
+    
+    main(argp)

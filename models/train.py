@@ -17,7 +17,7 @@ class Trainer():
         for epoch in range(num_epochs):
             loss = self._train_epoch(loader)
             print(f'Epoch {epoch+1} / {num_epochs} complete:')
-            print(f'Train loss = {loss}.')
+            print(f'Last batch train loss = {loss}.')
             print(f'Test loss = {self.test()}.')
             
     def _train_epoch(self, loader):
