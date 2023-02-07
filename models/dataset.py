@@ -12,7 +12,7 @@ class ChoraleDataset(data.Dataset):
         mask_p: probability that a token is masked.
         randtok_p: probability that a masked token is replace randomly.
     """
-    def __init__(self, load_path: str, pitch_aug_range: int = 5, mask_p: float = 0.15, randtok_p: float = 0.1,
+    def __init__(self, load_path: str, pitch_aug_range: int = 5, mask_p: float = 0.3, randtok_p: float = 0.1,
                  tt_split: float = 0.9, device: str = 'cpu'):
         self.pitch_aug_range = pitch_aug_range
         self.mask_p = mask_p
@@ -20,9 +20,9 @@ class ChoraleDataset(data.Dataset):
         self.device = device
 
         # Token information
-        self.STATIC_TOKENS = ['<S>', '<E>', '<M>', '<T>', '<P>', '-1'] 
-        self.pitch_range = (21 - pitch_aug_range, 108 + pitch_aug_range)
-        self.token_list =  ['<S>', '<E>', '<M>', '<T>', '<P>', '-1'] + (
+        self.STATIC_TOKENS = ['<S>', '<E>', '<M>', '<T>', '<P>'] 
+        self.pitch_range = (36 - pitch_aug_range, 88 + pitch_aug_range)
+        self.token_list =  ['<S>', '<E>', '<M>', '<T>', '<P>', -1] + (
                           list(range(21 - pitch_aug_range, 108 + pitch_aug_range + 1)))
 
         # Generate key - token dicts
@@ -39,20 +39,38 @@ class ChoraleDataset(data.Dataset):
     def __len__(self):
         return len(self.train)
         
-    def __getitem__(self, idx):
-        pitch_aug = random.randint(-self.pitch_aug_range, self.pitch_aug_range) # Not implemented yet
-        tgt = self.train[idx].copy()
+    def __getitem__(self, idx): # Move this to another method so can reuse
+        pitch_aug = random.randint(-self.pitch_aug_range, self.pitch_aug_range) 
         src = self.train[idx].copy()
+        tgt = self.train[idx].copy()
         
-        # Masking
+        return self._mask_and_aug(src, tgt, pitch_aug)
+        
+    def get_test(self, n: int | None = None):
+        """Returns the test set as (src, tgt)."""
+        assert 1 < n and n < len(self.train), "Index out of range."
+
+        src, tgt = self._mask_and_aug(self.test[0].copy(), self.test[0].copy(), 0)
+        src = src.reshape(1, -1)
+        tgt = tgt.reshape(1, -1)
+        for i in range(1, n):
+            temp_src, temp_tgt = self._mask_and_aug(self.test[i].copy(), self.test[i].copy(), 0)
+            src = torch.cat((src, temp_src.reshape(1, -1)), dim=0)
+            tgt = torch.cat((tgt, temp_tgt.reshape(1, -1)), dim=0)
+            
+        return src, tgt
+        
+    def _mask_and_aug(self, src, tgt, pitch_aug):
+        """Masks, augments, and encodes (src, tgt)"""
         for i, token in enumerate(src):
             # Only mask/augment note tokens
             if token in self.STATIC_TOKENS:
                 continue
             
-            # Augment pitch
-            tgt[i] += pitch_aug
-            src[i] += pitch_aug
+            # Augment pitch if not silent (=-1)
+            if token != -1:
+                tgt[i] += pitch_aug
+                src[i] += pitch_aug
 
             # BERT-style masking
             rng_mask = random.uniform(0, 1)
@@ -66,7 +84,7 @@ class ChoraleDataset(data.Dataset):
         return self._encode(src), self._encode(tgt)
         
     def _encode(self, seq: list): 
-        """Converts from list[str] to torch.tensor.
+        """Converts from list[str | int] to torch.tensor.
         Args:
             seq: unencoded sequence.
         Returns:
@@ -81,17 +99,12 @@ class ChoraleDataset(data.Dataset):
         Returns:
             seq: decoded sequence.
         """
-        return [*map(self.key_to_token.get, seq_enc.tolist())]
+        return [*map(self.key_to_token.get, *seq_enc.tolist())]
 
 def test():
     test = ChoraleDataset('../data/processed/jsb16seq.json')
-    print('Test __getitem__')
-    for i in range(15):
-        print(test[i][0])
-        print(test[i][0].shape)
-        print(test[i][1])
-        print(test[i][1].shape)
-
+    
+    print(test.get_test(5)[1].shape)
 
 if __name__ == '__main__':
     test()

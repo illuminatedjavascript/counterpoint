@@ -17,9 +17,8 @@ class Trainer():
         for epoch in range(num_epochs):
             loss = self._train_epoch(loader)
             print(f'Epoch {epoch+1} / {num_epochs} complete:')
-            
-            # TODO: Add dev/test loss calculation
             print(f'Train loss = {loss}.')
+            print(f'Test loss = {self.test()}.')
             
     def _train_epoch(self, loader):
         """Trains epoch & returns loss for last batch."""
@@ -38,7 +37,11 @@ class Trainer():
         return loss.item()
         
     @torch.no_grad()
-    def test(self, dataset):
-        # TODO: Implement this
+    def test(self):
         self.model.eval()
-        raise(NotImplementedError)
+        
+        src, tgt = self.dataset.get_test(100)
+        pred = self.model.forward(src)
+        loss = self.loss_fn(pred.transpose(1, 2), tgt) 
+        
+        return loss.item()

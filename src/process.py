@@ -23,7 +23,6 @@ class JSBCtoSeq():
         for bar in bars:
             if bar == []:
                 continue
-            # add tokens for: s - soprano; a - alto; t - tenor; b - bass ? 
             seq = ['<S>']
             seq.append(bar[0][0])
             seq.append(bar[0][1])
@@ -60,7 +59,7 @@ class JSBCtoSeq():
 
 
 def main():
-    seq_len = 16
+    seq_len = 32
     file = JSBCtoSeq('../data/raw/Jsb16thSeparated.json', f'../data/processed/jsb{seq_len}seq.json', seq_len)
 
 if __name__ == '__main__':

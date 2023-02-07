@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from dataset import ChoraleDataset
+from .dataset import ChoraleDataset
 
     
 class ChoraleBertConfig():
@@ -8,14 +8,14 @@ class ChoraleBertConfig():
     def __init__(self, dataset: ChoraleDataset):
         # Dataset properties
         self.vocab_len = len(dataset.key_to_token)
-        self.seq_len = dataset[0].shape[0]
+        self.seq_len = dataset[0][0].shape[0]
         self.pad_idx = dataset.token_to_key['<P>']
         self.device = dataset.device
         
         # Transformer model properties
-        self.n_layers = 2
-        self.n_heads = 4
-        self.emb_dim = 20
+        self.n_layers = 4
+        self.n_heads = 6
+        self.emb_dim = 30
         self.ff_dim = 2*self.emb_dim 
         
 
@@ -29,8 +29,8 @@ class ChoraleBertModel(nn.Module):
         self.key_embed = nn.Embedding(config.vocab_len, config.emb_dim, padding_idx=config.pad_idx) # pad_idx required?
 
         # Transformer
-        self.encoder_layer = nn.TransformerEncoderLayer(config.seq_len, config.n_heads, config.ff_dim, 
-                                                        batch_first=True) # Add dropout
+        self.encoder_layer = nn.TransformerEncoderLayer(config.emb_dim, config.n_heads, config.ff_dim, 
+                                                        batch_first=True) # Add dropout?
         self.encoder = nn.TransformerEncoder(self.encoder_layer, config.n_layers) # Add norm (look at docs)?
         
     def forward(self, seq: torch.tensor): # Not tested
