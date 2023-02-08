@@ -14,9 +14,9 @@ class ChoraleBertConfig():
         
         # Transformer model properties
         self.n_layers = 6
-        self.n_heads = 6
-        self.emb_dim = 30
-        self.ff_dim = 4*self.emb_dim 
+        self.n_heads = 4
+        self.emb_dim = 20
+        self.ff_dim = 2*self.emb_dim 
         
 
 class ChoraleBertModel(nn.Module):
@@ -52,7 +52,7 @@ class ChoraleBertModel(nn.Module):
         # Compute distributions using einsum where i: batch; j: seq_idx; k: emb_dim; l: vocab_idx
         logits = torch.einsum('ijk, lk -> ijl', enc, self.key_embed.weight) # Shape (#batches, seq_len, vocab_len)
     
-        return logits
+        return logits * (config.emb_dim ** (-0.5))
 
 
 def test():

@@ -73,6 +73,8 @@ class ChoraleDataset(data.Dataset):
                 src[i] += pitch_aug
 
             # BERT-style masking
+            # Instead of doing this, maybe randomly choose a % to mask, more
+            # friendly for gibbs sampling.
             rng_mask = random.uniform(0, 1)
             if rng_mask < self.mask_p:
                 rng_randtok = random.uniform(0, 1)

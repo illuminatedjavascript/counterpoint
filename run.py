@@ -5,7 +5,7 @@ from models import model, dataset, train, sample
 
 def main(argp):
     if argp.function == 'train':
-        train_model(argp.model, checkpoint=True) # Remove checkpoint
+        train_model(argp.model, checkpoint=True) 
     elif argp.function == 'sample':
         sample_model(argp.model, argp.load, argp.save)
 
@@ -19,7 +19,7 @@ def train_model(model_save_path: str, checkpoint=False):
         print(f"Using {device} device")
 
     # Load
-    chorale_dataset = dataset.ChoraleDataset('./data/processed/jsb16seq.json') # Change manually 
+    chorale_dataset = dataset.ChoraleDataset('./data/processed/jsb32seq.json') # Change manually 
     model_config = model.ChoraleBertConfig(chorale_dataset)
     chorale_model = model.ChoraleBertModel(model_config)
 
@@ -29,7 +29,7 @@ def train_model(model_save_path: str, checkpoint=False):
     print(f'Initialised model with {sum(p.numel() for p in chorale_model.parameters() if p.requires_grad)} parameters.')
     
     # Train
-    trainer = train.Trainer(chorale_model, chorale_dataset, 1e-4)
+    trainer = train.Trainer(chorale_model, chorale_dataset, 5*1e-4)
     trainer.train(200, 64)
     
     # Save
