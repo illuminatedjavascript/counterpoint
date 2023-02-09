@@ -13,9 +13,9 @@ class ChoraleBertConfig():
         self.device = dataset.device
         
         # Transformer model properties
-        self.n_layers = 6
-        self.n_heads = 4
-        self.emb_dim = 20
+        self.n_layers = 8
+        self.n_heads = 8
+        self.emb_dim = 40
         self.ff_dim = 2*self.emb_dim 
         
 
