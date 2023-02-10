@@ -3,6 +3,7 @@ import json
 class JSBCtoSeq():
     """Loads, formats, and saves the JSB Chorales dataset into sequence form."""
     def __init__(self, load_path: str, save_path: str = '', seq_len: int = 16):
+        self.bar_len = 16
         self.PAD_TOKEN = '<P>'
         self.seq_len = seq_len
         
@@ -16,7 +17,7 @@ class JSBCtoSeq():
         # Slice into seq_len chunks
         bars = []
         for chorale in raw:
-            bars = bars + [chorale[n*self.seq_len: (n+1)*self.seq_len] for n in range(0, 1 + len(chorale)//self.seq_len)] # Make into sliding door?
+            bars = bars + [chorale[n*self.bar_len: (n*self.bar_len + self.seq_len)] for n in range(0, 1 + len(chorale)//self.bar_len)] 
             
         # Sequentialise and pad
         seq_data = []
@@ -60,7 +61,7 @@ class JSBCtoSeq():
 
 def main():
     seq_len = 32
-    file = JSBCtoSeq('../data/raw/Jsb16thSeparated.json', f'../data/processed/jsb{seq_len}seq.json', seq_len)
+    file = JSBCtoSeq('../data/raw/Jsb16thSeparated.json', f'../data/processed/jsb{seq_len}slide.json', seq_len)
 
 
 if __name__ == '__main__':
