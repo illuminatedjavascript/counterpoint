@@ -38,8 +38,8 @@ class Sampler():
         
         # Save samples as MIDI
         to_midi(dataset, src_dec, os.path.join(save_path, f'{n}_source.midi'))
-        to_midi(dataset, tgt_dec, os.path.join(save_path, f'{n}_sample_bach.midi'))
-        to_midi(dataset, sample_dec, os.path.join(save_path, f'{n}_sample_model.midi'))
+        to_midi(dataset, tgt_dec, os.path.join(save_path, f'{n}_bach.midi'))
+        to_midi(dataset, sample_dec, os.path.join(save_path, f'{n}_model.midi'))
 
 
 def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.tensor):
