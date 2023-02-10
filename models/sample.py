@@ -22,7 +22,7 @@ class Sampler():
         model.eval()
         for i in range(1, 100):
             self.generate_sample(i)
-            print(f'Completed {i+1}/100')
+            print(f'Completed {i}/100')
         
     def generate_sample(self, n: int):
         dataset = self.dataset
@@ -43,8 +43,8 @@ class Sampler():
 
 
 def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.tensor):
-    num_step = 1000 # Change manually
-    block_size = 3 # Change manually
+    num_step = 500 # Change manually
+    block_size = 10 # Change manually
     mask_key = dataset.token_to_key['<M>']
     uniform_dist = torch.where(seq == mask_key, 1., 0.)
     uniform_dist = uniform_dist / torch.linalg.norm(uniform_dist)
@@ -61,7 +61,7 @@ def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.te
     return seq
 
 def to_midi(dataset: ChoraleDataset, seq, save_path): # NOT WORKING FOR MASKED SRC
-    """THIS NEEDS TO BE CLEANED UP AND DOCUMENTED/COMMENTED BETTER."""
+    """THIS NEEDS TO BE REFACTORED UP AND DOCUMENTED/COMMENTED BETTER."""
     if '<P>' in seq:
         print('Sequence cannot contain <P>')
         return
