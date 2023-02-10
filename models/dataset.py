@@ -11,7 +11,7 @@ class ChoraleDataset(data.Dataset):
         pitch_aug_range: range of random pitch augmentation.
         max_mask: maximum number of note tokens masked.
     """
-    def __init__(self, load_path: str, pitch_aug_range: int = 6, max_mask: float = 0.7,
+    def __init__(self, load_path: str, pitch_aug_range: int = 6, max_mask: float = 0.75,
                  tt_split: float = 0.9, device: str = 'cpu'):
         self.pitch_aug_range = pitch_aug_range
         self.max_mask = max_mask
@@ -40,33 +40,37 @@ class ChoraleDataset(data.Dataset):
         return len(self.train)
         
     def __getitem__(self, idx):
+        src, tgt = self.train[idx].copy(), self.train[idx].copy()
+        mask_p = random.uniform(0, self.max_mask)
         pitch_aug = random.randint(-self.pitch_aug_range, self.pitch_aug_range) 
-        src = self.train[idx].copy()
-        tgt = self.train[idx].copy()
         
-        return self._mask_and_aug(src, tgt, pitch_aug) 
+        return self._mask_and_aug(src, tgt, pitch_aug, mask_p) 
         
     def get_test(self, n: int | None = None):
         """Returns the test set as (src, tgt)."""
         assert 1 < n and n < len(self.train), "Index out of range."
 
-        src, tgt = self._mask_and_aug(self.test[0].copy(), self.test[0].copy(), 0)
+        mask_p = random.uniform(0, self.max_mask)
+        src, tgt = self._mask_and_aug(self.test[0].copy(), self.test[0].copy(), 0, mask_p)
         src = src.reshape(1, -1)
         tgt = tgt.reshape(1, -1)
         for i in range(1, n):
-            temp_src, temp_tgt = self._mask_and_aug(self.test[i].copy(), self.test[i].copy(), 0)
+            mask_p = random.uniform(0, self.max_mask)
+            temp_src, temp_tgt = self._mask_and_aug(self.test[i].copy(), self.test[i].copy(), 0, mask_p)
             src = torch.cat((src, temp_src.reshape(1, -1)), dim=0)
             tgt = torch.cat((tgt, temp_tgt.reshape(1, -1)), dim=0)
             
         return src, tgt
-        
-    def _mask_and_aug(self, src, tgt, pitch_aug, max_mask=False):
-        """Masks, augments, and encodes (src, tgt)"""
-        if max_mask == True:
-            mask_p = 0.7
-        else:
-            mask_p = random.uniform(0, self.max_mask)
+    
+    def get_rand_test(self):
+        """Returns a random fully masked and encoded (src, tgt) tuple for evaluation"""
+        idx = random.randint(0, len(self.test))
+        src, tgt = self.test[idx].copy(), self.test[idx].copy()
 
+        return self._mask_and_aug(src, tgt, 0, 0.85)
+        
+    def _mask_and_aug(self, src, tgt, pitch_aug, mask_p):
+        """Masks, augments, and encodes (src, tgt)"""
         for i, token in enumerate(src):
             # Only mask/augment note tokens
             if token in self.STATIC_TOKENS:

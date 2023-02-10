@@ -19,7 +19,7 @@ def train_model(model_save_path: str, checkpoint=False):
         print(f"Using {device} device")
 
     # Load
-    chorale_dataset = dataset.ChoraleDataset('./data/processed/jsb16seq.json', device=device) # Change manually 
+    chorale_dataset = dataset.ChoraleDataset('./data/processed/jsb32slide.json', device=device) # Change manually 
     model_config = model.ChoraleBertConfig(chorale_dataset)
     chorale_model = model.ChoraleBertModel(model_config).to(device)
 
@@ -36,7 +36,7 @@ def train_model(model_save_path: str, checkpoint=False):
     torch.save(chorale_model.state_dict(), model_save_path)
 
 
-def sample_model(model_load_path: str, sample_save_path):
+def sample_model(model_load_path: str, sample_save_path: str):
     # Use CUDA if available
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if device == 'cuda':
@@ -45,12 +45,12 @@ def sample_model(model_load_path: str, sample_save_path):
         print(f"Using {device} device")
     
     # Load trained model
-    chorale_dataset = dataset.ChoraleDataset('./data/processed/jsb16seq.json', device=device) # Change manually 
+    chorale_dataset = dataset.ChoraleDataset('./data/processed/jsb32slide.json', device=device) # Change manually 
     model_config = model.ChoraleBertConfig(chorale_dataset)
     chorale_model = model.ChoraleBertModel(model_config).to(device)
     chorale_model.load_state_dict(torch.load(model_load_path))
     
-    sampler = sample.Sampler(chorale_model, chorale_dataset, sample_load_path, sample_save_path)
+    sampler = sample.Sampler(chorale_model, chorale_dataset, sample_save_path)
 
 
 if __name__ == '__main__':
@@ -59,7 +59,7 @@ if __name__ == '__main__':
         choices=['train', 'sample'])
     argp.add_argument('-p', '--model',
         help='save/load path for model params',
-        default="model_params_16.txt")
+        default="model_params_32.txt")
     argp.add_argument('-s', '--save',
         help='save path for midi samples',
         default="./data/output/")

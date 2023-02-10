@@ -1,8 +1,12 @@
 import os
-import random
 import json
 import torch
-from midiutil import MIDIFile
+import numpy as np
+from midiutil import MIDIFile # DELETE
+from mido import Message, MidiFile, MidiTrack # DELETE?
+from mido import MetaMessage # DELETE?
+from mido import bpm2tempo # DELETE?
+import pypianoroll
 from .model import ChoraleBertModel
 from .dataset import ChoraleDataset
 
@@ -16,39 +20,31 @@ class Sampler():
         
         # Sample
         model.eval()
-        samples = []
+        for i in range(1, 100):
+            self.generate_sample(i)
+            print(f'Completed {i+1}/100')
         
-        # Samples from train set
-        idx = random.randint(1, 1000)
-        src, tgt = dataset[idx]
+    def generate_sample(self, n: int):
+        dataset = self.dataset
+        model = self.model
+        save_path = self.save_path
+        
+        # Fully masked samples from test set
+        src, tgt = dataset.get_rand_test()
         src_dec = dataset.decode(src)
-        
         tgt_dec = dataset.decode(tgt)
         sample_enc = gibbs_sample(model, dataset, src)
         sample_dec = dataset.decode(sample_enc)
         
-        print('src')
-        print(src_dec)
-        print('tgt')
-        print(tgt_dec)
-        print('sample')
-        print(sample_dec)
-
-        samples.append(src_dec)
-        samples.append(tgt_dec)
-        samples.append(sample_dec)
-        
-        # Save samples as json
-        with open(os.path.join(save_path, f'samples.json'), "w") as f:
-            json.dump(samples, f)
-            
         # Save samples as MIDI
-        to_midi(dataset, tgt_dec, os.path.join(save_path, f'sample_bach.midi'))
-        to_midi(dataset, sample_dec, os.path.join(save_path, f'sample_model.midi'))
+        to_midi(dataset, src_dec, os.path.join(save_path, f'{n}_source.midi'))
+        to_midi(dataset, tgt_dec, os.path.join(save_path, f'{n}_sample_bach.midi'))
+        to_midi(dataset, sample_dec, os.path.join(save_path, f'{n}_sample_model.midi'))
+
 
 def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.tensor):
-    num_step = 1000 # CHANGE
-    block_size = 10
+    num_step = 1000 # Change manually
+    block_size = 3 # Change manually
     mask_key = dataset.token_to_key['<M>']
     uniform_dist = torch.where(seq == mask_key, 1., 0.)
     uniform_dist = uniform_dist / torch.linalg.norm(uniform_dist)
@@ -64,13 +60,15 @@ def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.te
             
     return seq
 
-
 def to_midi(dataset: ChoraleDataset, seq, save_path): # NOT WORKING FOR MASKED SRC
     """THIS NEEDS TO BE CLEANED UP AND DOCUMENTED/COMMENTED BETTER."""
-    assert '<P>' not in seq, "Sequence cannot contain pad token."
-    midi_res = MIDIFile(1)
-    midi_res.addProgramChange(0, 0, 0, 0)
-    midi_res.addTempo(0, 0, 140)
+    if '<P>' in seq:
+        print('Sequence cannot contain <P>')
+        return
+
+    midi_res = MIDIFile(removeDuplicates = False, deinterleave = False)
+    midi_res.addProgramChange(0, 0, 0, 20)
+    midi_res.addTempo(0, 0, 160)
 
     # Reformat into the difference channels
     tok_idx = 0
@@ -103,9 +101,11 @@ def to_midi(dataset: ChoraleDataset, seq, save_path): # NOT WORKING FOR MASKED S
             if note_buffer == -1:
                 if note == -1: # Case: current note is silence
                     pass # Do nothing
+
                 else: # Case: current note in not silence
-                    if curr_time == seq_len: # Case: last note
-                        midi_res.addNote(0, 0, pitch=note_buffer, duration=1, time=time_buffer, volume=100) # Play final note
+                    if curr_time == seq_len and note != -1: # Case: last note
+                        midi_res.addNote(0, 0, pitch=note, duration=1, time=time_buffer, volume=100) # Play final note
+                        
                     else: # Case: not the last note
                         note_buffer = note # Update buffer
                         time_buffer = curr_time # Update buffer
@@ -115,16 +115,19 @@ def to_midi(dataset: ChoraleDataset, seq, save_path): # NOT WORKING FOR MASKED S
                     midi_res.addNote(0, 0, pitch=note_buffer, duration=(curr_time-time_buffer), time=time_buffer, volume=100) # Play note
                     note_buffer = note # Update buffer
                     time_buffer = curr_time # Update buffer
+
                 elif note == note_buffer: # Case: current note is the same as buffer note
                     if curr_time == seq_len: # Case: current note is last
                         midi_res.addNote(0, 0, pitch=note_buffer, duration=((curr_time-time_buffer) + 1), time=time_buffer, volume=100) # Play final note
+
                     else: # Case: current note is not last:
                         pass # Do nothing
+
                 elif note != note_buffer: # Case: current note is different from buffer note
                     midi_res.addNote(0, 0, pitch=note_buffer, duration=(curr_time-time_buffer), time=time_buffer, volume=100) # Play note
                     note_buffer = note
                     time_buffer = curr_time
-                    
+
     # Save
     with open(save_path, "wb") as f:
         midi_res.writeFile(f)

@@ -14,9 +14,9 @@ class ChoraleBertConfig():
         
         # Transformer model properties
         self.n_layers = 8
-        self.n_heads = 8
-        self.emb_dim = 40
-        self.ff_dim = 2*self.emb_dim 
+        self.n_heads = 6
+        self.emb_dim = 60
+        self.ff_dim = 4*self.emb_dim 
         
 
 class ChoraleBertModel(nn.Module):
