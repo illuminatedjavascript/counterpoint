@@ -1,12 +1,6 @@
 import os
-import json
 import torch
-import numpy as np
-from midiutil import MIDIFile # DELETE
-from mido import Message, MidiFile, MidiTrack # DELETE?
-from mido import MetaMessage # DELETE?
-from mido import bpm2tempo # DELETE?
-import pypianoroll
+from midiutil import MIDIFile
 from .model import ChoraleBertModel
 from .dataset import ChoraleDataset
 
@@ -18,33 +12,93 @@ class Sampler():
         self.dataset = dataset
         self.save_path = save_path
         
-        # Sample
         model.eval()
-        for i in range(1, 100):
-            self.generate_sample(i)
-            print(f'Completed {i}/100')
+        self._test_set(25)
+        self._c_maj(10)
         
-    def generate_sample(self, n: int):
+    def _test_set(self, num_samples: int):
         dataset = self.dataset
         model = self.model
         save_path = self.save_path
-        
-        # Fully masked samples from test set
-        src, tgt = dataset.get_rand_test()
-        src_dec = dataset.decode(src)
-        tgt_dec = dataset.decode(tgt)
-        sample_enc = gibbs_sample(model, dataset, src)
-        sample_dec = dataset.decode(sample_enc)
-        
-        # Save samples as MIDI
-        to_midi(dataset, src_dec, os.path.join(save_path, f'{n}_source.midi'))
-        to_midi(dataset, tgt_dec, os.path.join(save_path, f'{n}_bach.midi'))
-        to_midi(dataset, sample_dec, os.path.join(save_path, f'{n}_model.midi'))
+    
+        for i in range(1, num_samples):
+            # Get src not containing padding
+            src, tgt = dataset.get_rand_test()
+            src_dec = dataset.decode(src)
+            tgt_dec = dataset.decode(tgt)
+            while '<P>' in src_dec:
+                src, tgt = dataset.get_rand_test()
+                src_dec = dataset.decode(src)
+                tgt_dec = dataset.decode(tgt)
 
+            # Sample
+            sample_enc = gibbs_sample(model, dataset, src)
+            sample_dec = dataset.decode(sample_enc)
 
+            # Save samples as MIDI
+            to_midi(dataset, src_dec, os.path.join(save_path, f'{i}_source.midi'))
+            to_midi(dataset, tgt_dec, os.path.join(save_path, f'{i}_original.midi'))
+            to_midi(dataset, sample_dec, os.path.join(save_path, f'{i}_model.midi'))
+
+            print(f'Completed {i}/{num_samples}')
+
+    def _c_maj(self, num_samples: int):
+        dataset = self.dataset
+        model = self.model
+        save_path = self.save_path
+
+        cmaj = ["<S>", 60, '<M>', '<M>', '<M>', "<T>",
+                       60, '<M>', '<M>', '<M>', "<T>",
+                       60, '<M>', '<M>', '<M>', "<T>",
+                       60, '<M>', '<M>', '<M>', "<T>",
+                       62, '<M>', '<M>', '<M>', "<T>",
+                       62, '<M>', '<M>', '<M>', "<T>",
+                       62, '<M>', '<M>', '<M>', "<T>",
+                       62, '<M>', '<M>', '<M>', "<T>",
+                       64, '<M>', '<M>', '<M>', "<T>",
+                       64, '<M>', '<M>', '<M>', "<T>",
+                       64, '<M>', '<M>', '<M>', "<T>", 
+                       64, '<M>', '<M>', '<M>', "<T>", 
+                       65, '<M>', '<M>', '<M>', "<T>", 
+                       65, '<M>', '<M>', '<M>', "<T>", 
+                       65, '<M>', '<M>', '<M>', "<T>", 
+                       65, '<M>', '<M>', '<M>', "<T>", 
+                       67, '<M>', '<M>', '<M>', "<T>", 
+                       67, '<M>', '<M>', '<M>', "<T>", 
+                       67, '<M>', '<M>', '<M>', "<T>", 
+                       67, '<M>', '<M>', '<M>', "<T>", 
+                       69, '<M>', '<M>', '<M>', "<T>", 
+                       69, '<M>', '<M>', '<M>', "<T>", 
+                       69, '<M>', '<M>', '<M>', "<T>", 
+                       69, '<M>', '<M>', '<M>', "<T>", 
+                       71, '<M>', '<M>', '<M>', "<T>", 
+                       71, '<M>', '<M>', '<M>', "<T>", 
+                       71, '<M>', '<M>', '<M>', "<T>", 
+                       71, '<M>', '<M>', '<M>', "<T>", 
+                       72, '<M>', '<M>', '<M>', "<T>", 
+                       72, '<M>', '<M>', '<M>', "<T>", 
+                       72, '<M>', '<M>', '<M>', "<T>", 
+                       72, '<M>', '<M>', '<M>', "<E>"]
+
+        to_midi(dataset, cmaj, os.path.join(save_path, f'cmajor_source.midi'))
+        src = dataset._encode(cmaj)
+
+        # Sample and save
+        for i in range(1, num_samples):
+            sample_enc = gibbs_sample(model, dataset, src)
+            sample_dec = dataset.decode(sample_enc)
+            to_midi(dataset, sample_dec, os.path.join(save_path, f'cmajor_model_{i}.midi'))
+
+            print(f'Completed {i}/{num_samples}')
+                
+        
+# TODO: Add a more sophisticated gibbs sampling procedure 
 def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.tensor):
-    num_step = 500 # Change manually
-    block_size = 10 # Change manually
+    # Sampling hyperparams
+    num_step = 1500 
+    block_size = 10
+    temperture = 0.6
+
     mask_key = dataset.token_to_key['<M>']
     uniform_dist = torch.where(seq == mask_key, 1., 0.)
     uniform_dist = uniform_dist / torch.linalg.norm(uniform_dist)
@@ -52,10 +106,10 @@ def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.te
     for _ in range(num_step):
         idx = torch.multinomial(uniform_dist, block_size, replacement=False)
         seq[idx] = mask_key
-        logits = model.forward(seq.reshape(1, -1)) # Shape (1, seq_len, vocab_len)
+        logits = model.forward(seq.reshape(1, -1)) / temperture # Shape (1, seq_len, vocab_len)
         probs = torch.nn.functional.softmax(logits[0, idx, :], dim=1) # Shape (block_size, vocab_len)
         
-        for i in range(block_size):
+        for i in range(block_size): # Parallelise?
             seq[idx[i]] = torch.multinomial(probs[i], 1)
             
     return seq
@@ -66,7 +120,7 @@ def to_midi(dataset: ChoraleDataset, seq, save_path): # NOT WORKING FOR MASKED S
         print('Sequence cannot contain <P>')
         return
 
-    midi_res = MIDIFile(removeDuplicates = False, deinterleave = False)
+    midi_res = MIDIFile(removeDuplicates=False, deinterleave=False) # Err without this options
     midi_res.addProgramChange(0, 0, 0, 20)
     midi_res.addTempo(0, 0, 160)
 

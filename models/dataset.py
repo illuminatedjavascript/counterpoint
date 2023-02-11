@@ -67,7 +67,7 @@ class ChoraleDataset(data.Dataset):
         idx = random.randint(0, len(self.test))
         src, tgt = self.test[idx].copy(), self.test[idx].copy()
 
-        return self._mask_and_aug(src, tgt, 0, 0.85)
+        return self._mask_and_aug(src, tgt, 0, 0.75)
         
     def _mask_and_aug(self, src, tgt, pitch_aug, mask_p):
         """Masks, augments, and encodes (src, tgt)"""

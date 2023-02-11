@@ -45,7 +45,7 @@ def sample_model(model_load_path: str, sample_save_path: str):
         print(f"Using {device} device")
     
     # Load trained model
-    chorale_dataset = dataset.ChoraleDataset('./data/processed/jsb32slide.json', device=device) # Change manually 
+    chorale_dataset = dataset.ChoraleDataset('./data/processed/jsb32seq.json', device=device) # Change manually 
     model_config = model.ChoraleBertConfig(chorale_dataset)
     chorale_model = model.ChoraleBertModel(model_config).to(device)
     chorale_model.load_state_dict(torch.load(model_load_path))
