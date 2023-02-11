@@ -5,7 +5,7 @@ A masked sequence model for harmonisation in the style of J.S. Bach. Inspired by
 
 ### Installation
 
-The recommend you create your own environment if you want to install. Entering to following commands should install the repo correctly on Windows/Linux.
+I recommend you create your own environment if you want to install. Entering the following commands should install the repo correctly on Windows/Linux machines.
 
 ```
 git clone https://github.com/loua19/counterpoint
