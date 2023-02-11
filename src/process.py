@@ -1,20 +1,31 @@
 import json
 
 class JSBCtoSeq():
-    """Loads, formats, and saves the JSB Chorales dataset into sequence form."""
+    """Loads, formats, and saves the raw JSB Chorales dataset into sequence form.
+    Args
+        load_path: path to load raw dataset.
+        save_path: path to save processed dataset.
+        seq_len: number of time steps to include in each data point.
+    """
     def __init__(self, load_path: str, save_path: str = '', seq_len: int = 16):
         self.bar_len = 16
         self.PAD_TOKEN = '<P>'
         self.seq_len = seq_len
         
-        raw = self.load_data(load_path)
-        self.data = self.process_data(raw)
-        self.save_data(save_path)
+        raw = self._load_data(load_path)
+        self.data = self._process_data(raw)
+        self._save_data(save_path)
 
-    def process_data(self, raw):
+    def _process_data(self, raw):
+        """Processes raw dataset into appropriately sized sequences.
+        Args:
+            raw: list of raw data.
+        Returns:
+            data: list of processed data.
+        """
         raw = raw['test'] + raw['train'] + raw['valid']
         
-        # Slice into seq_len chunks
+        # Slice into seq_len chunks (sliding door with step_size = bar_length)
         bars = []
         for chorale in raw:
             bars = bars + [chorale[n*self.bar_len: (n*self.bar_len + self.seq_len)] for n in range(0, 1 + len(chorale)//self.bar_len)] 
@@ -45,16 +56,26 @@ class JSBCtoSeq():
             seq_data.append(seq)
         
         data = seq_data
+
         return data
     
-    @staticmethod
-    def load_data(load_path: str):
+    def _load_data(load_path: str):
+        """Internal function for loading raw data.
+        Args:
+            load_path: path to raw dataset.
+        Returns:
+            raw: raw data as list.
+        """
         with open(load_path) as f:
             raw = json.load(f)
         
         return raw
     
-    def save_data(self, save_path):
+    def _save_data(self, save_path):
+        """Internal function for saving processed data.
+        Args:
+            save_path: path to save processed dataset.
+        """
         with open(save_path, 'w') as f:
             json.dump(self.data, f)
 

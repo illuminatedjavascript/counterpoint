@@ -10,7 +10,12 @@ def main(argp):
         sample_model(argp.model, argp.save)
 
 
-def train_model(model_save_path: str, checkpoint=False):
+def train_model(model_save_path: str, checkpoint: bool =False):
+    """Entry point for training the model.
+    Args:
+        model_save_path: path where model parameters should be saved/loaded.
+        checkpoint: If true, loads checkpoint located at model_save_path.
+    """
     # Use CUDA if available
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if device == 'cuda':
@@ -37,6 +42,11 @@ def train_model(model_save_path: str, checkpoint=False):
 
 
 def sample_model(model_load_path: str, sample_save_path: str):
+    """Produces samples of the model.
+    Args:
+        model_load_path: path to saved model parameters.
+        sample_save_path: path to the directory where samples are saved.
+    """
     # Use CUDA if available
     device = "cuda" if torch.cuda.is_available() else "cpu"
     if device == 'cuda':
@@ -50,6 +60,7 @@ def sample_model(model_load_path: str, sample_save_path: str):
     chorale_model = model.ChoraleBertModel(model_config).to(device)
     chorale_model.load_state_dict(torch.load(model_load_path))
     
+    # Sample
     sampler = sample.Sampler(chorale_model, chorale_dataset, sample_save_path)
 
 

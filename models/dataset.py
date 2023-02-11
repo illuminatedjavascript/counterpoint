@@ -10,6 +10,8 @@ class ChoraleDataset(data.Dataset):
         load_path: path to (processed) dataset file.
         pitch_aug_range: range of random pitch augmentation.
         max_mask: maximum number of note tokens masked.
+        tt_split: ratio for test-train split.
+        device: device for PyTorch tensors.
     """
     def __init__(self, load_path: str, pitch_aug_range: int = 6, max_mask: float = 0.75,
                  tt_split: float = 0.9, device: str = 'cpu'):
@@ -46,8 +48,14 @@ class ChoraleDataset(data.Dataset):
         
         return self._mask_and_aug(src, tgt, pitch_aug, mask_p) 
         
-    def get_test(self, n: int | None = None):
-        """Returns the test set as (src, tgt)."""
+    def get_test(self, n: int = 100):
+        """Returns a slice of the test set.
+        Args:
+            n: integer of how much of the test set to return.
+        Returns:
+            src: torch.tensor (shape (n, seq_len)) of augmented, masked, and encoded chorales.
+            tgt: torch.tensor (shape (n, seq_len)) of augmented and encoded chorales.
+        """
         assert 1 < n and n < len(self.train), "Index out of range."
 
         mask_p = random.uniform(0, self.max_mask)
@@ -63,14 +71,27 @@ class ChoraleDataset(data.Dataset):
         return src, tgt
     
     def get_rand_test(self):
-        """Returns a random fully masked and encoded (src, tgt) tuple for evaluation"""
+        """Returns a random maximally masked src, tgt pair for evaluation.
+        Returns:
+            src: torch.tensor of shape (seq_len).
+            tgt: torch.tensor of shape (seq_len).
+        """
         idx = random.randint(0, len(self.test))
         src, tgt = self.test[idx].copy(), self.test[idx].copy()
 
         return self._mask_and_aug(src, tgt, 0, 0.75)
         
-    def _mask_and_aug(self, src, tgt, pitch_aug, mask_p):
-        """Masks, augments, and encodes (src, tgt)"""
+    def _mask_and_aug(self, src, tgt, pitch_aug: int, mask_p: float):
+        """Masks, augments, and encodes a tuple (src, tgt).
+        Args:
+            src: raw chorale sequence as a list.
+            tgt: raw chorale sequence as a list.
+            pitch_aug: integer to augment all pitches by.
+            mask_p: percentage of src note tokens to mask.
+        Returns: 
+            src_enc: torch.tensor of masked, augmented and encoded src.
+            tgt_enc: torch.tensor of masked, augmented and encoded src.
+        """
         for i, token in enumerate(src):
             # Only mask/augment note tokens
             if token in self.STATIC_TOKENS:
@@ -91,25 +112,17 @@ class ChoraleDataset(data.Dataset):
     def _encode(self, seq: list): 
         """Converts from list[str | int] to torch.tensor.
         Args:
-            seq: unencoded sequence.
+            seq: unencoded sequence as a list.
         Returns:
-            seq_enc: src as torch.tensor.
+            seq_enc: encoded sequence as a torch.tensor.
         """
         return torch.tensor([*map(self.token_to_key.get, seq)], dtype=torch.long).to(self.device)
 
     def decode(self, seq_enc: torch.tensor):
         """Converts torch.tensor to list[str] .
         Args:
-            seq_enc: encoded sequence.
+            seq_enc: encoded sequence as a torch.tensor.
         Returns:
-            seq: decoded sequence.
+            seq: decoded sequence as a list.
         """
         return [self.key_to_token[key] for key in seq_enc.tolist()]
-
-def test():
-    test = ChoraleDataset('../data/processed/jsb16seq.json')
-    
-    print(test.get_test(5)[1].shape)
-
-if __name__ == '__main__':
-    test()

@@ -6,6 +6,11 @@ from .dataset import ChoraleDataset
 
 # Does this need to be a class? or can it be a function?
 class Sampler(): 
+    """Placeholder entrypoint for calculating, processing, and saving samples.
+    Args:
+        model: ChoraleBertModel instance to be sampled from.
+        dataset: ChoraleDataset instance to get prompts from.
+    """
     def __init__(self, model: ChoraleBertModel, dataset: ChoraleDataset,
                  save_path: str):
         self.model = model
@@ -17,6 +22,10 @@ class Sampler():
         self._c_maj(10)
         
     def _test_set(self, num_samples: int):
+        """Internal function for generating, processing, and saving samples from test set.
+        Args:
+            num_samples: number of samples required.
+        """
         dataset = self.dataset
         model = self.model
         save_path = self.save_path
@@ -36,17 +45,22 @@ class Sampler():
             sample_dec = dataset.decode(sample_enc)
 
             # Save samples as MIDI
-            to_midi(dataset, src_dec, os.path.join(save_path, f'{i}_source.midi'))
-            to_midi(dataset, tgt_dec, os.path.join(save_path, f'{i}_original.midi'))
-            to_midi(dataset, sample_dec, os.path.join(save_path, f'{i}_model.midi'))
+            to_midi(src_dec, os.path.join(save_path, f'{i}_source.midi'))
+            to_midi(tgt_dec, os.path.join(save_path, f'{i}_original.midi'))
+            to_midi(sample_dec, os.path.join(save_path, f'{i}_model.midi'))
 
             print(f'Completed {i}/{num_samples}')
 
     def _c_maj(self, num_samples: int):
+        """Internal function for generating, processing, and saving samples from C-Major scale.
+        Args:
+            num_samples: number of samples required.
+        """
         dataset = self.dataset
         model = self.model
         save_path = self.save_path
 
+        # TODO: Store this in a separate file.
         cmaj = ["<S>", 60, '<M>', '<M>', '<M>', "<T>",
                        60, '<M>', '<M>', '<M>', "<T>",
                        60, '<M>', '<M>', '<M>', "<T>",
@@ -80,25 +94,34 @@ class Sampler():
                        72, '<M>', '<M>', '<M>', "<T>", 
                        72, '<M>', '<M>', '<M>', "<E>"]
 
-        to_midi(dataset, cmaj, os.path.join(save_path, f'cmajor_source.midi'))
+        to_midi(cmaj, os.path.join(save_path, f'cmajor_source.midi'))
         src = dataset._encode(cmaj)
 
         # Sample and save
         for i in range(1, num_samples):
             sample_enc = gibbs_sample(model, dataset, src)
             sample_dec = dataset.decode(sample_enc)
-            to_midi(dataset, sample_dec, os.path.join(save_path, f'cmajor_model_{i}.midi'))
+            to_midi(sample_dec, os.path.join(save_path, f'cmajor_model_{i}.midi'))
 
             print(f'Completed {i}/{num_samples}')
                 
         
 # TODO: Add a more sophisticated gibbs sampling procedure 
 def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.tensor):
-    # Sampling hyperparams
+    """Generates samples according to a simplistic gibbs sampling procedure.
+    Args:
+        model: ChoraleBertModel instance to use to create samples.
+        dataset: ChoraleDataset class to get encode decode functions from.
+        seq: torch.tensor of encoded prompt to be harmonised.
+    Returns:
+        seq: torch.tensor of sequence harmonised using gibbs sampling.
+    """
+    # Gibbs sampling hyperparameters
     num_step = 1500 
     block_size = 10
     temperture = 0.6
 
+    seq = torch.clone(seq)
     mask_key = dataset.token_to_key['<M>']
     uniform_dist = torch.where(seq == mask_key, 1., 0.)
     uniform_dist = uniform_dist / torch.linalg.norm(uniform_dist)
@@ -109,27 +132,33 @@ def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.te
         logits = model.forward(seq.reshape(1, -1)) / temperture # Shape (1, seq_len, vocab_len)
         probs = torch.nn.functional.softmax(logits[0, idx, :], dim=1) # Shape (block_size, vocab_len)
         
-        for i in range(block_size): # Parallelise?
+        for i in range(block_size):
             seq[idx[i]] = torch.multinomial(probs[i], 1)
             
     return seq
 
-def to_midi(dataset: ChoraleDataset, seq, save_path): # NOT WORKING FOR MASKED SRC
-    """THIS NEEDS TO BE REFACTORED UP AND DOCUMENTED/COMMENTED BETTER."""
+def to_midi(seq: list, save_path: str):
+    """Processes and saves an unencoded chorale sequence into midi.
+    Args:
+        seq: chorale as unencoded sequence.
+        save_path: save path for midi file.
+    """
     if '<P>' in seq:
         print('Sequence cannot contain <P>')
         return
 
-    midi_res = MIDIFile(removeDuplicates=False, deinterleave=False) # Err without this options
-    midi_res.addProgramChange(0, 0, 0, 20)
-    midi_res.addTempo(0, 0, 160)
+    midi_res = MIDIFile(removeDuplicates=False, deinterleave=False) # Error without these options
+    midi_res.addProgramChange(0, 0, 0, 20) # Organ=20
+    midi_res.addTempo(0, 0, 160) # 160 BPM
+    
+    STATIC_TOKENS = ['<S>', '<E>', '<M>', '<T>', '<P>'] 
 
-    # Reformat into the difference channels
+    # Reformat sequence into 4 different channels
     tok_idx = 0
     chord_idx = 0
     seq_reformatted = [[], [], [], []]
     for token in seq:
-        if token in dataset.STATIC_TOKENS:
+        if token in STATIC_TOKENS:
             if token == '<T>':
                 chord_idx += 1    
                 tok_idx = 0
@@ -143,6 +172,7 @@ def to_midi(dataset: ChoraleDataset, seq, save_path): # NOT WORKING FOR MASKED S
         
     seq_len = len(seq_reformatted[0]) - 1
         
+    # Create midi file according to channels of reformatted sequence
     for channel in seq_reformatted:
         time_buffer = 0
         note_buffer = channel[0]
