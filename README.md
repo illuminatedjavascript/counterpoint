@@ -1,7 +1,7 @@
 
 # counterpoint
 
-A masked sequence model for harmonisation in the style of J.S. Bach. Inspired by other work (1, 2), this model uses a transformer encoder to harmonize incomplete piano-rolls in the style of Bach. See (3) for more information about the dataset.
+A masked sequence model for harmonisation in the style of J.S. Bach. Inspired by other work (1, 2, 3), this model uses a transformer encoder to harmonize incomplete piano-rolls in the style of Bach. See (4) for more information about the dataset.
 
 ### Installation
 
@@ -27,4 +27,6 @@ If you want to generate your own samples, simply type ```python run.py sample```
 
 2. Huang, C.-Z. A., Vaswani, A., Uszkoreit, J., Shazeer, N., Simon, I., Hawthorne, C., Dai, A. M., Hoffman, M. D., Dinculescu, M., & Eck, D. (2018). Music Transformer.
 
-3. https://github.com/czhuang/JSB-Chorales-dataset
+3. Devlin, J., Chang, M.-W., Lee, K., & Toutanova, K. (2018). BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding.
+
+4. https://github.com/czhuang/JSB-Chorales-dataset

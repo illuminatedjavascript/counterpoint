@@ -39,7 +39,7 @@ class ChoraleBertModel(nn.Module):
                                                         batch_first=True) # Add dropout?
         self.encoder = nn.TransformerEncoder(self.encoder_layer, config.n_layers) # Add norm (look at docs)?
         
-    def forward(self, seq: torch.tensor): # Not tested
+    def forward(self, seq: torch.tensor):
         """Forward pass for model.
         Args:
             seq: torch.tensor of shape (#batches, seq_len).
