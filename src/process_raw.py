@@ -16,6 +16,7 @@ class JSBCtoSeq():
         self.data = self._process_data(raw)
         self._save_data(save_path)
 
+
     def _process_data(self, raw):
         """Processes raw dataset into appropriately sized sequences.
         Args:
@@ -23,8 +24,6 @@ class JSBCtoSeq():
         Returns:
             data: list of processed data.
         """
-        raw = raw['test'] + raw['train'] + raw['valid']
-        
         # Slice into seq_len chunks (sliding door with step_size = bar_length)
         bars = []
         for chorale in raw:
@@ -78,11 +77,24 @@ class JSBCtoSeq():
         """
         with open(save_path, 'w') as f:
             json.dump(self.data, f)
+    
+
+def remove_tt_split(path: str):
+    """Removes test-train split format of raw data of the JSBChorales dataset."""
+    # Load
+    with open(path) as f:
+        raw = json.load(f)
+        tt_removed_raw = raw['test'] + raw['train'] + raw['valid']
+    
+    # Overwrite
+    with open(path, 'w') as f:
+        json.dump(tt_removed_raw, f)
 
 
 def main():
     seq_len = 32
     file = JSBCtoSeq('../data/raw/Jsb16thSeparated.json', f'../data/processed/jsb{seq_len}slide.json', seq_len)
+    #remove_tt_split('../data/raw/Jsb16thSeparated.json')
 
 
 if __name__ == '__main__':
