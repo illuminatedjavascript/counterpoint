@@ -31,7 +31,7 @@ class ProcessMIDI():
 
                     # Process fugue with second voice removed
                     quant_roll = midi_to_pianoroll(mid, div)
-                    pianoroll_to_midi(quant_roll, os.path.join(midi_save_dir, adj_file)) # With adjusted file name
+                    pianoroll_to_midi(quant_roll, os.path.join(midi_save_dir, adj_file), div) # With adjusted file name
                     formatted_rolls.append(self._format_pianoroll(quant_roll))
 
                     # Reload midi and remove 3rd voice
@@ -41,13 +41,13 @@ class ProcessMIDI():
                     
                     # Process fugue with second voice removed
                     quant_roll = midi_to_pianoroll(mid, div)
-                    pianoroll_to_midi(quant_roll, os.path.join(midi_save_dir, adj_file)) # With adjusted file name
+                    pianoroll_to_midi(quant_roll, os.path.join(midi_save_dir, adj_file), div) # With adjusted file name
                     formatted_rolls.append(self._format_pianoroll(quant_roll))
                     
                 else:
                     # Quantise and save MIDI
                     quant_roll = midi_to_pianoroll(mid, div)
-                    pianoroll_to_midi(quant_roll, os.path.join(midi_save_dir, file))
+                    pianoroll_to_midi(quant_roll, os.path.join(midi_save_dir, file), div)
 
                     # Format quantised roll and append to list
                     formatted_rolls.append(self._format_pianoroll(quant_roll))
@@ -71,12 +71,13 @@ class ProcessMIDI():
 
 
 def main():
-    div = 4
+    div = 8
     midi_save_dir = f'../data/raw/fugue/midi{div*4}sep'
     json_save_path = f'../data/raw/fugue/fugue{div*4}sep.json'
-    os.mkdir(midi_save_dir)
+    if not os.path.exists(midi_save_dir):
+        os.mkdir(midi_save_dir)
 
-    proc = ProcessMIDI('../data/raw/fugue/raw_midi', midi_save_dir, json_save_path, div=4)
+    proc = ProcessMIDI('../data/raw/fugue/raw_midi', midi_save_dir, json_save_path, div)
 
 if __name__ == '__main__':
     main()

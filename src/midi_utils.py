@@ -83,11 +83,11 @@ def midi_to_pianoroll(mid: mido.MidiFile, div: int = 4): # ADD TRACK ORDERING FO
     return pianorolls
 
 # Clean up
-def pianoroll_to_midi(pianoroll, save_path: str):
+def pianoroll_to_midi(pianoroll: list, save_path: str, div: int):
     """Converts a pianoroll of sequences into midi."""
     mid = midiutil.MIDIFile(removeDuplicates=False, deinterleave=False) # Error without these options
     mid.addProgramChange(0, 0, 0, 0) # Organ=20
-    mid.addTempo(0, 0, 240) # 240 BPM
+    mid.addTempo(0, 0, 60*div) # 240 BPM
 
     seq_len = len(pianoroll[0])
     for seq in pianoroll:
