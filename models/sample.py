@@ -1,5 +1,6 @@
 import os
 import torch
+import numpy as np
 from midiutil import MIDIFile
 from .model import ChoraleBertModel
 from .dataset import ChoraleDataset
@@ -117,19 +118,20 @@ def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.te
         seq: torch.tensor of sequence harmonised using gibbs sampling.
     """
     # Gibbs sampling hyperparameters
-    num_step = 1500 
-    block_size = 10
-    temperture = 0.6
+    num_step = 1500
+    block_size = 5
+    temp = np.linspace(1, 0.01, num_step).tolist() # Linear temperature decrease
 
     seq = torch.clone(seq)
     mask_key = dataset.token_to_key['<M>']
     uniform_dist = torch.where(seq == mask_key, 1., 0.)
     uniform_dist = uniform_dist / torch.linalg.norm(uniform_dist)
 
-    for _ in range(num_step):
+    for j in range(num_step):
+        curr_temp = temp[j]
         idx = torch.multinomial(uniform_dist, block_size, replacement=False)
         seq[idx] = mask_key
-        logits = model.forward(seq.reshape(1, -1)) / temperture # Shape (1, seq_len, vocab_len)
+        logits = model.forward(seq.reshape(1, -1)) / curr_temp # Shape (1, seq_len, vocab_len)
         probs = torch.nn.functional.softmax(logits[0, idx, :], dim=1) # Shape (block_size, vocab_len)
         
         for i in range(block_size):
@@ -148,7 +150,7 @@ def to_midi(seq: list, save_path: str):
         return
 
     midi_res = MIDIFile(removeDuplicates=False, deinterleave=False) # Error without these options
-    midi_res.addProgramChange(0, 0, 0, 20) # Organ=20
+    midi_res.addProgramChange(0, 0, 0, 0) # Piano = 1, Organ = 20
     midi_res.addTempo(0, 0, 160) # 160 BPM
     
     STATIC_TOKENS = ['<S>', '<E>', '<M>', '<T>', '<P>'] 
