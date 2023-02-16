@@ -58,7 +58,7 @@ class JSBCtoSeq():
 
         return data
     
-    def _load_data(load_path: str):
+    def _load_data(self, load_path: str):
         """Internal function for loading raw data.
         Args:
             load_path: path to raw dataset.
@@ -92,10 +92,11 @@ def remove_tt_split(path: str):
 
 
 def main():
-    seq_len = 32
-    file = JSBCtoSeq('../data/raw/Jsb16thSeparated.json', f'../data/processed/jsb{seq_len}slide.json', seq_len)
+    div = 4
+    seq_len = 64
+    file = JSBCtoSeq(f'../data/raw/fugue/fugue{4*div}sep.json',
+                     f'../data/processed/fugue{4*div}sep{seq_len}slide.json', seq_len)
     #remove_tt_split('../data/raw/Jsb16thSeparated.json')
-
 
 if __name__ == '__main__':
     main()
