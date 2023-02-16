@@ -1,6 +1,8 @@
 
 # counterpoint
 
+![image](piano.jpg){: style="float: left"}
+
 A masked sequence model for harmonisation in the style of J.S. Bach. Inspired by other work (1, 2, 3), this model uses a transformer encoder to harmonize incomplete piano-rolls in the style of Bach. See (4) for more information about the dataset.
 
 ### Installation
