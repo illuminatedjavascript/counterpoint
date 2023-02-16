@@ -1,7 +1,7 @@
 
 # counterpoint
 
-<img align="right" style="margin-left: 5px;" src="piano.jpg" width="200" height="200">
+<img align="right" style="margin-left: 5px;" src="piano.jpg" width="250" height="250">
 
 A masked sequence model for harmonisation in the style of J.S. Bach. Inspired by other work (1, 2, 3), this model uses a transformer encoder to harmonize incomplete piano-rolls in the style of Bach.
 
