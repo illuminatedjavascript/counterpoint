@@ -16,12 +16,11 @@ class ChoraleBertConfig():
         self.device = dataset.device
         
         # Transformer model properties
-        self.n_layers = 6
+        self.n_layers = 8
         self.n_heads = 8
         self.emb_dim = 128
         self.ff_dim = 4*self.emb_dim 
         
-
 class ChoraleBertModel(nn.Module):
     """nn.Module class for BERT-Chorale model.
     Args:

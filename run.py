@@ -36,12 +36,16 @@ def train_model(model_save_path: str, checkpoint: bool = False):
     
     # Pre-train on chorales 
     trainer = train.Trainer(bach_model, chorale_dataset, 1e-3)
-    trainer.train(200, 32)
+    trainer.train(100, 64)
+    trainer = train.Trainer(bach_model, chorale_dataset, 1e-4)
+    trainer.train(50, 64)
     torch.save(bach_model.state_dict(), f'pretrain_{model_save_path}')
     
     # Train on fugues
     trainer = train.Trainer(bach_model, fugue_dataset, 1e-3)
-    trainer.train(200, 32)
+    trainer.train(100, 32)
+    trainer = train.Trainer(bach_model, fugue_dataset, 1e-4)
+    trainer.train(50, 32)
     torch.save(bach_model.state_dict(), f'finetune_{model_save_path}')
 
 
