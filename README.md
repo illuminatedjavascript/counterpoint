@@ -1,7 +1,7 @@
 
 # counterpoint
 
-<img align="right" style="margin-left: 5px;" src="piano.jpg" width="250" height="250">
+<img align="right" style="margin-left: 5px;" src="piano.jpg" width="230" height="230">
 
 A masked sequence model for harmonisation in the style of J.S. Bach. Inspired by other work (1, 2, 3), this model uses a transformer encoder to harmonize incomplete piano-rolls in the style of Bach.
 
@@ -26,7 +26,7 @@ pip install progress
 
 ### Usage
 
-If you want to generate your own samples, simply type ```python run.py sample```. By modifying ```models/sample.py``` you can enter your own prompts for re-harmonisation. Simply follow the process outlined in the ```Sampler``` class.
+If you want to generate your own chorale samples, simply type ```python run.py sample --model pretrain_16div32sep.txt```. By modifying ```models/sample.py``` you can enter your own prompts for re-harmonisation. Simply follow the process outlined in the ```Sampler``` class.
 
 ### References
 

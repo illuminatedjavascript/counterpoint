@@ -19,7 +19,7 @@ class Sampler():
         self.save_path = save_path
         
         model.eval()
-        self._test_set(25)
+        self._test_set(10)
         self._c_maj(10)
         
     def _test_set(self, num_samples: int):
@@ -33,11 +33,11 @@ class Sampler():
     
         for i in range(1, num_samples):
             # Get src not containing padding
-            src, tgt = dataset.get_rand_test()
+            src, tgt = dataset.sample_test()
             src_dec = dataset.decode(src)
             tgt_dec = dataset.decode(tgt)
             while '<P>' in src_dec:
-                src, tgt = dataset.get_rand_test()
+                src, tgt = dataset.sample_test()
                 src_dec = dataset.decode(src)
                 tgt_dec = dataset.decode(tgt)
 
@@ -118,7 +118,7 @@ def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.te
         seq: torch.tensor of sequence harmonised using gibbs sampling.
     """
     # Gibbs sampling hyperparameters
-    num_step = 1500
+    num_step = 2000
     block_size = 5
     temp = np.linspace(1, 0.01, num_step).tolist() # Linear temperature decrease
 
@@ -150,7 +150,7 @@ def to_midi(seq: list, save_path: str):
         return
 
     midi_res = MIDIFile(removeDuplicates=False, deinterleave=False) # Error without these options
-    midi_res.addProgramChange(0, 0, 0, 0) # Piano = 1, Organ = 20
+    midi_res.addProgramChange(0, 0, 0, 0) # Piano = 0, Organ = 20
     midi_res.addTempo(0, 0, 160) # 160 BPM
     
     STATIC_TOKENS = ['<S>', '<E>', '<M>', '<T>', '<P>'] 
