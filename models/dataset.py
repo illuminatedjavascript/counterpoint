@@ -79,7 +79,7 @@ class ChoraleDataset(data.Dataset):
         src, tgt = self.test[idx].copy(), self.test[idx].copy()
         
         # Mask everything but the top voice
-        masked_voices = [2, 3, 4]
+        masked_voices = [2, 3, 4] # Add back 2
         for i, tok in enumerate(src):
             if i % 5 in masked_voices:
                 src[i] = '<M>'

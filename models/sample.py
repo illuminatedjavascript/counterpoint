@@ -1,4 +1,5 @@
 import os
+import math
 import torch
 import numpy as np
 from midiutil import MIDIFile
@@ -117,26 +118,39 @@ def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.te
     Returns:
         seq: torch.tensor of sequence harmonised using gibbs sampling.
     """
-    # Gibbs sampling hyperparameters
-    num_step = 2000
-    block_size = 5
-    temp = np.linspace(1, 0.01, num_step).tolist() # Linear temperature decrease
+    # Hyperparams
+    alpha_max = 1
+    alpha_min = 0.05
+    num_steps = 150
+    neta = 0.6
+    temp = 0.8
 
-    seq = torch.clone(seq)
+    seq = torch.clone(seq) # ?
     mask_key = dataset.token_to_key['<M>']
+    total_to_mask = torch.sum(seq == mask_key).item() # ? 
     uniform_dist = torch.where(seq == mask_key, 1., 0.)
     uniform_dist = uniform_dist / torch.linalg.norm(uniform_dist)
-
-    for j in range(num_step):
-        curr_temp = temp[j]
+    
+    # Gibbs sampling
+    for n in range(num_steps):
+        
+        # Calc masking rate according to paper
+        mask_prob = max(alpha_min,
+                        alpha_max -
+                        ((n*(alpha_max - alpha_min)) / (neta*num_steps))
+                        )
+        
+        block_size = max(1, math.trunc(mask_prob * total_to_mask))
         idx = torch.multinomial(uniform_dist, block_size, replacement=False)
         seq[idx] = mask_key
-        logits = model.forward(seq.reshape(1, -1)) / curr_temp # Shape (1, seq_len, vocab_len)
+        logits = model.forward(seq.reshape(1, -1)) / temp # Shape (1, seq_len, vocab_len)
         probs = torch.nn.functional.softmax(logits[0, idx, :], dim=1) # Shape (block_size, vocab_len)
         
         for i in range(block_size):
             seq[idx[i]] = torch.multinomial(probs[i], 1)
             
+        print(n, block_size)
+        
     return seq
 
 def to_midi(seq: list, save_path: str):

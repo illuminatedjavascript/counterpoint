@@ -13,9 +13,11 @@ class ChoraleBertConfig():
         self.vocab_len = len(dataset.key_to_token)
         self.seq_len = dataset[0][0].shape[0]
         self.pad_idx = dataset.token_to_key['<P>']
+        self.silent_idx = dataset.token_to_key[-1]
         self.device = dataset.device
         
-        # Transformer model properties
+        # Model hyperparameters
+        self.silent_weight = 0.9
         self.n_layers = 8
         self.n_heads = 8
         self.emb_dim = 128
@@ -28,6 +30,10 @@ class ChoraleBertModel(nn.Module):
     def __init__(self, config: ChoraleBertConfig):
         super(ChoraleBertModel, self).__init__()
         self.config = config
+        
+        # CEL weights
+        self.loss_weights = torch.ones(config.vocab_len).to(config.device)
+        self.loss_weights[config.silent_idx] = config.silent_weight
 
         # Input layer
         self.pos_emb = nn.Embedding(config.seq_len, config.emb_dim)

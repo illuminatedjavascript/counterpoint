@@ -93,9 +93,11 @@ def remove_tt_split(path: str):
 
 def main():
     div = 4
-    seq_len = 64
-    file = JSBCtoSeq(f'../data/raw/fugue/fugue{4*div}sep.json',
-                     f'../data/processed/fugue{4*div}sep{seq_len}slide.json', seq_len)
+    seq_len = 16
+    file = JSBCtoSeq(f'../data/raw/fugue{4*div}sep.json',
+                     f'../data/processed/fugue{4*div}sep{seq_len}len.json', seq_len)
+    file = JSBCtoSeq(f'../data/raw/chorale{4*div}sep.json',
+                     f'../data/processed/chorale{4*div}sep{seq_len}len.json', seq_len)
     #remove_tt_split('../data/raw/Jsb16thSeparated.json')
 
 if __name__ == '__main__':
