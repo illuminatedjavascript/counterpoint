@@ -13,7 +13,7 @@ class ChoraleDataset(data.Dataset):
         tt_split: ratio for test-train split.
         device: device for PyTorch tensors.
     """
-    def __init__(self, load_path: str, pitch_aug_range: int = 6, max_mask: float = 0.75,
+    def __init__(self, load_path: str, pitch_aug_range: int = 6, max_mask: float = 0.9,
                  tt_split: float = 0.9, device: str = 'cpu'):
         self.pitch_aug_range = pitch_aug_range
         self.max_mask = max_mask

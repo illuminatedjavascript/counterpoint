@@ -20,8 +20,8 @@ class Sampler():
         self.save_path = save_path
         
         model.eval()
-        self._test_set(10)
-        self._c_maj(10)
+        self._test_set(100)
+        #self._c_maj(10)
         
     def _test_set(self, num_samples: int):
         """Internal function for generating, processing, and saving samples from test set.
@@ -121,8 +121,8 @@ def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.te
     # Hyperparams
     alpha_max = 1
     alpha_min = 0.05
-    num_steps = 150
-    neta = 0.6
+    num_steps = 250
+    neta = 0.75
     temp = 0.8
 
     seq = torch.clone(seq) # ?
