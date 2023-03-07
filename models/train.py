@@ -16,7 +16,7 @@ class Trainer():
     def __init__(self, model: ChoraleBertModel, dataset: ChoraleDataset, lr: float):
         self.model = model
         self.dataset = dataset
-        self.loss_fn = nn.CrossEntropyLoss(weight=model.loss_weights)
+        self.loss_fn = nn.CrossEntropyLoss()
         self.optimiser = torch.optim.Adam(model.parameters(), lr=lr)
 
     def train(self, num_epochs: int, batch_size: int):

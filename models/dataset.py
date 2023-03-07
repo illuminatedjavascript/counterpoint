@@ -13,7 +13,7 @@ class ChoraleDataset(data.Dataset):
         tt_split: ratio for test-train split.
         device: device for PyTorch tensors.
     """
-    def __init__(self, load_path: str, pitch_aug_range: int = 6, max_mask: float = 0.9,
+    def __init__(self, load_path: str, pitch_aug_range: int = 6, max_mask: float = 0.95,
                  tt_split: float = 0.9, device: str = 'cpu'):
         self.pitch_aug_range = pitch_aug_range
         self.max_mask = max_mask
@@ -46,7 +46,7 @@ class ChoraleDataset(data.Dataset):
         
         return self._mask_and_aug(src, tgt, pitch_aug, mask_p) 
         
-    def get_test(self, n: int = -1): # This is real messy
+    def get_test(self, n: int = -1):
         """Returns a slice of the test set.
         Args:
             n: integer of how much of the test set to return, or -1 for entire set.
@@ -97,8 +97,11 @@ class ChoraleDataset(data.Dataset):
             src_enc: torch.tensor of masked, augmented and encoded src.
             tgt_enc: torch.tensor of masked, augmented and encoded src.
         """
-        # Choice voices to sample
-        masked_voices = (torch.multinomial(torch.ones(4)/4, random.randint(1, 4), replacement=False) + 1).tolist()
+        # Randomly selects 1-4 voices to mask
+        #masked_voices = (torch.multinomial(torch.ones(4)/4, random.randint(1, 4), replacement=False) + 1).tolist()
+
+        # Randomly selects 1 voice to mask
+        masked_voices = [random.randint(1, 4)]
         
         for i, token in enumerate(src):
             # Only mask/augment note tokens
