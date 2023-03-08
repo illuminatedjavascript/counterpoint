@@ -16,7 +16,34 @@ class JSBCtoSeq():
         self.data = self._process_data(raw)
         self._save_data(save_path)
 
+    def _process_prompts(self, raw):
+        """Processes raw dataset into starting prompts for entire piece generation.
+        Args:
+            raw: list of raw data.
+        Returns:
+            data: list of processed data.
+        """
+        data = []
+        
+        for fugue in raw:
+            seq = ['<S>']
+            seq.append(fugue[0][0])
+            seq.append(fugue[0][1])
+            seq.append(fugue[0][2])
+            seq.append(fugue[0][3])
 
+            for chord in fugue[1: self.seq_len]:
+                seq.append('<T>')
+                seq.append(chord[0])
+                seq.append(chord[1])
+                seq.append(chord[2])
+                seq.append(chord[3])
+
+            seq.append('<E>')
+            data.append(seq)
+
+        return data
+        
     def _process_data(self, raw):
         """Processes raw dataset into appropriately sized sequences.
         Args:
@@ -93,12 +120,11 @@ def remove_tt_split(path: str):
 
 def main():
     div = 4
-    seq_len = 16
+    seq_len = 64
     file = JSBCtoSeq(f'../data/raw/fugue{4*div}sep.json',
                      f'../data/processed/fugue{4*div}sep{seq_len}len.json', seq_len)
     file = JSBCtoSeq(f'../data/raw/chorale{4*div}sep.json',
                      f'../data/processed/chorale{4*div}sep{seq_len}len.json', seq_len)
-    #remove_tt_split('../data/raw/Jsb16thSeparated.json')
 
 if __name__ == '__main__':
     main()
