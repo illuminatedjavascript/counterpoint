@@ -9,9 +9,11 @@ The model can be trained on two datasets which are both located in ```data/raw``
 
 The model uses masking and gibbs sampling in the same way as described in (1). When only trained on the JSBChorales dataset, the model has a similar sample quality to Google Magenta's [Coconet](https://magenta.tensorflow.org/coconet). Samples (MIDI and some MP3 files) can be found in ```samples```, please note the model, dataset, and sampling procedure is still a work in progress.
 
+Update 08/03/23 - 
+
 ### Installation
 
-I recommend you create your own environment if you want to try it out yourself. Entering the following commands should install the repo correctly on Windows/Linux machines.
+I recommend you create your own environment if you want to try it out yourself. Entering the following commands should install the repo correctly on Linux machines. If you want to use CUDA, please make sure the correct graphics drivers and (CUDA-enabled) PyTorch version are installed. If this is done, the model should use your GPU automatically.
 
 ```
 git clone https://github.com/loua19/counterpoint
@@ -26,7 +28,13 @@ pip install progress
 
 ### Usage
 
-If you want to generate your own chorale samples, simply type ```python run.py sample --model pretrain_16div32sep.txt```. By modifying ```models/sample.py``` you can enter your own prompts for re-harmonisation. Simply follow the process outlined in the ```Sampler``` class.
+If you want to generate your own fugue samples, you do this via the command: 
+
+```
+python run.py sample -p fugue_16div64sep_4-22-528-4.txt
+```
+
+Note that the current iteration of the model has ~17m parameters. As such, training and sampling may fail if your machine doesn't have enough RAM/VRAM. The model was trained and sampled on a Tesla V100 16GB.
 
 ### References
 

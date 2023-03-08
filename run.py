@@ -5,9 +5,9 @@ from models import model, dataset, train, sample
 
 def main(argp):
     if argp.function == 'train':
-        train_model(argp.model)
+        train_model(argp.param, argp.checkpoint)
     elif argp.function == 'sample':
-        sample_model(argp.model, argp.save)
+        sample_model(argp.param, argp.save)
 
 def train_model(model_save_path: str, checkpoint: bool = False):
     """Entry point for training the model.
@@ -35,17 +35,21 @@ def train_model(model_save_path: str, checkpoint: bool = False):
     print(f'Initialised model with {sum(p.numel() for p in bach_model.parameters() if p.requires_grad)} parameters.')
     
     # Pre-train on chorales 
-    trainer = train.Trainer(bach_model, chorale_dataset, 1e-3)
-    trainer.train(200, 64)
+    trainer = train.Trainer(bach_model, chorale_dataset, 3e-4)
+    trainer.train(100, 64)
     trainer = train.Trainer(bach_model, chorale_dataset, 1e-4)
     trainer.train(100, 64)
+    trainer = train.Trainer(bach_model, chorale_dataset, 1e-5)
+    trainer.train(50, 64)
     torch.save(bach_model.state_dict(), f'pretrain_{model_save_path}')
     
     # Train on fugues
-    trainer = train.Trainer(bach_model, fugue_dataset, 1e-3)
-    trainer.train(200, 32)
+    trainer = train.Trainer(bach_model, fugue_dataset, 3e-4)
+    trainer.train(100, 32)
     trainer = train.Trainer(bach_model, fugue_dataset, 1e-4)
     trainer.train(100, 32)
+    trainer = train.Trainer(bach_model, fugue_dataset, 1e-5)
+    trainer.train(50, 32)
     torch.save(bach_model.state_dict(), f'finetune_{model_save_path}')
 
 
@@ -76,11 +80,13 @@ if __name__ == '__main__':
     argp = argparse.ArgumentParser()
     argp.add_argument('function',
         choices=['train', 'sample'])
-    argp.add_argument('-p', '--model',
-        help='save/load path for model params',
-        default="16div64sep.txt")
+    argp.add_argument('-p', '--param',
+        help='save/load path for model params.',
+        default="params.txt")
+    argp.add_argument('-c', '--checkpoint', action='store_true',
+        help='if present, load model from [-p] when training.')
     argp.add_argument('-s', '--save',
-        help='save path for midi samples',
+        help='save path for midi samples.',
         default="./data/output/")
     argp = argp.parse_args()
     
