@@ -9,8 +9,6 @@ The model can be trained on two datasets which are both located in ```data/raw``
 
 The model uses masking and gibbs sampling in the same way as described in (1). When only trained on the JSBChorales dataset, the model has a similar sample quality to Google Magenta's [Coconet](https://magenta.tensorflow.org/coconet). Samples (MIDI and some MP3 files) can be found in ```samples```, please note the model, dataset, and sampling procedure is still a work in progress.
 
-Update 08/03/23 - 
-
 ### Installation
 
 I recommend you create your own environment if you want to try it out yourself. Entering the following commands should install the repo correctly on Linux machines. If you want to use CUDA, please make sure the correct graphics drivers and (CUDA-enabled) PyTorch version are installed. If this is done, the model should use your GPU automatically.
