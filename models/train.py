@@ -61,7 +61,7 @@ class Trainer():
         """
         self.model.eval()
 
-        src, tgt = self.dataset.get_test(-1)
+        src, tgt = self.dataset.get_test(100)
         pred = self.model.forward(src)
         loss = self.loss_fn(pred.transpose(1, 2), tgt) 
         

@@ -17,9 +17,9 @@ class ChoraleBertConfig():
         self.device = dataset.device
         
         # Model hyperparameters
-        self.n_layers = 8
-        self.n_heads = 8
-        self.emb_dim = 128
+        self.n_layers = 4
+        self.n_heads = 22
+        self.emb_dim = 528
         self.ff_dim = 4*self.emb_dim 
         
 class ChoraleBertModel(nn.Module):

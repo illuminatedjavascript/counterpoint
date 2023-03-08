@@ -56,6 +56,8 @@ class ChoraleDataset(data.Dataset):
         """
         if n == -1:
             n = len(self.test) - 1
+        elif n >= len(self.test):
+            n = len(self.test) - 1
 
         assert 1 < n and n < len(self.test), "Index out of range."
             
@@ -97,12 +99,10 @@ class ChoraleDataset(data.Dataset):
             src_enc: torch.tensor of masked, augmented and encoded src.
             tgt_enc: torch.tensor of masked, augmented and encoded src.
         """
-        # Randomly selects 1-4 voices to mask
-        #masked_voices = (torch.multinomial(torch.ones(4)/4, random.randint(1, 4), replacement=False) + 1).tolist()
+        # NOTE: This is not needed anymore, model should be retrained without this.
+        # Randomly selects 3 voices to mask
+        masked_voices = (torch.multinomial(torch.ones(4)/4, 3, replacement=False) + 1).tolist()
 
-        # Randomly selects 1 voice to mask
-        masked_voices = [random.randint(1, 4)]
-        
         for i, token in enumerate(src):
             # Only mask/augment note tokens
             if token in self.STATIC_TOKENS:
