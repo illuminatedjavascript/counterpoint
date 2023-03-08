@@ -1,12 +1,12 @@
 import os
 import math
+import json
 import torch
-import numpy as np
 from midiutil import MIDIFile
 from .model import ChoraleBertModel
 from .dataset import ChoraleDataset
 
-# Does this need to be a class? or can it be a function?
+
 class Sampler(): 
     """Placeholder entrypoint for calculating, processing, and saving samples.
     Args:
@@ -20,8 +20,8 @@ class Sampler():
         self.save_path = save_path
         
         model.eval()
-        self._test_set(100)
-        #self._c_maj(10)
+        self._gen_fugues('./data/processed/fugue16sep64len_prompts.json', 12)
+        #self._test_set(50)
         
     def _test_set(self, num_samples: int):
         """Internal function for generating, processing, and saving samples from test set.
@@ -53,62 +53,59 @@ class Sampler():
 
             print(f'Completed {i}/{num_samples}')
 
-    def _c_maj(self, num_samples: int):
-        """Internal function for generating, processing, and saving samples from C-Major scale.
+    def _gen_fugues(self, load_path: str, num_bars: int):
+        """Internal function for generating a full length fugues.
         Args:
-            num_samples: number of samples required.
+            num_bars: the number of bars to be added to the original prompt.
         """
+        def _gen_fugue(model: ChoraleBertModel, dataset: ChoraleDataset, prompt: list, num_bars: int):
+            """Given a the start of a fugue, complete it by adding num_bars more bars."""
+            tokens_per_bar = 5*16
+            MASKED_BAR = (['<T>'] + ['<M>']*4)*16
+            PAD_BAR = (['<P>']*5)*16
+            
+            res = prompt.copy()[:3*tokens_per_bar]
+
+            # First iter
+            curr = res.copy()[:3*tokens_per_bar] + MASKED_BAR + ['<E>']
+            curr_enc = dataset._encode(curr)
+            curr_comp_enc = gibbs_sample(model, dataset, curr_enc)
+            curr_comp_dec = dataset.decode(curr_comp_enc)
+            res = res + curr_comp_dec[tokens_per_bar*3:tokens_per_bar*4]
+            
+            # Add all apart from last bar
+            for i in range(1, num_bars-1):
+                curr = ['<S>'] + res.copy()[i*tokens_per_bar + 1: (i+3)*tokens_per_bar] + MASKED_BAR + ['<E>']
+                curr_enc = dataset._encode(curr)
+                curr_comp_enc = gibbs_sample(model, dataset, curr_enc)
+                curr_comp_dec = dataset.decode(curr_comp_enc)
+                res = res + curr_comp_dec[tokens_per_bar*3:tokens_per_bar*4]
+                
+            # Add the ending 
+            curr = res.copy()[-2*tokens_per_bar:] + MASKED_BAR + ['<E>'] + PAD_BAR
+            curr_enc = dataset._encode(curr)
+            curr_comp_enc = gibbs_sample(model, dataset, curr_enc)
+            curr_comp_dec = dataset.decode(curr_comp_enc)
+            res = res + curr_comp_dec[tokens_per_bar*2:tokens_per_bar*3]
+            
+            return res + ['<E>']
+
         dataset = self.dataset
         model = self.model
         save_path = self.save_path
-
-        # TODO: Store this in a separate file.
-        cmaj = ["<S>", 60, '<M>', '<M>', '<M>', "<T>",
-                       60, '<M>', '<M>', '<M>', "<T>",
-                       60, '<M>', '<M>', '<M>', "<T>",
-                       60, '<M>', '<M>', '<M>', "<T>",
-                       62, '<M>', '<M>', '<M>', "<T>",
-                       62, '<M>', '<M>', '<M>', "<T>",
-                       62, '<M>', '<M>', '<M>', "<T>",
-                       62, '<M>', '<M>', '<M>', "<T>",
-                       64, '<M>', '<M>', '<M>', "<T>",
-                       64, '<M>', '<M>', '<M>', "<T>",
-                       64, '<M>', '<M>', '<M>', "<T>", 
-                       64, '<M>', '<M>', '<M>', "<T>", 
-                       65, '<M>', '<M>', '<M>', "<T>", 
-                       65, '<M>', '<M>', '<M>', "<T>", 
-                       65, '<M>', '<M>', '<M>', "<T>", 
-                       65, '<M>', '<M>', '<M>', "<T>", 
-                       67, '<M>', '<M>', '<M>', "<T>", 
-                       67, '<M>', '<M>', '<M>', "<T>", 
-                       67, '<M>', '<M>', '<M>', "<T>", 
-                       67, '<M>', '<M>', '<M>', "<T>", 
-                       69, '<M>', '<M>', '<M>', "<T>", 
-                       69, '<M>', '<M>', '<M>', "<T>", 
-                       69, '<M>', '<M>', '<M>', "<T>", 
-                       69, '<M>', '<M>', '<M>', "<T>", 
-                       71, '<M>', '<M>', '<M>', "<T>", 
-                       71, '<M>', '<M>', '<M>', "<T>", 
-                       71, '<M>', '<M>', '<M>', "<T>", 
-                       71, '<M>', '<M>', '<M>', "<T>", 
-                       72, '<M>', '<M>', '<M>', "<T>", 
-                       72, '<M>', '<M>', '<M>', "<T>", 
-                       72, '<M>', '<M>', '<M>', "<T>", 
-                       72, '<M>', '<M>', '<M>', "<E>"]
-
-        to_midi(cmaj, os.path.join(save_path, f'cmajor_source.midi'))
-        src = dataset._encode(cmaj)
-
-        # Sample and save
-        for i in range(1, num_samples):
-            sample_enc = gibbs_sample(model, dataset, src)
-            sample_dec = dataset.decode(sample_enc)
-            to_midi(sample_dec, os.path.join(save_path, f'cmajor_model_{i}.midi'))
-
-            print(f'Completed {i}/{num_samples}')
-                
         
-# TODO: Add a more sophisticated gibbs sampling procedure 
+        with open(load_path) as f:
+            prompts = json.load(f)
+            
+        for i, prompt in enumerate(prompts):
+            res = _gen_fugue(model, dataset, prompt, num_bars)
+            to_midi(res, os.path.join(save_path, f'f{i+1}.midi'))
+            print(f'Finished {i+1}/{len(prompts)}')
+            
+            if i == 50:
+                break
+
+
 def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.tensor):
     """Generates samples according to a simplistic gibbs sampling procedure.
     Args:
@@ -118,23 +115,27 @@ def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.te
     Returns:
         seq: torch.tensor of sequence harmonised using gibbs sampling.
     """
-    # Hyperparams
-    alpha_max = 1
+    # Hyperparams from 'Counterpoint by Convolution' paper
+    alpha_max = 1. 
     alpha_min = 0.05
-    num_steps = 250
+    num_steps = 200 
     neta = 0.75
-    temp = 0.8
 
-    seq = torch.clone(seq) # ?
+    # Hyperparams for tempertature scaling
+    temp_max = 1.
+    temp_min = 0.7
+
+    seq = torch.clone(seq) 
     mask_key = dataset.token_to_key['<M>']
-    total_to_mask = torch.sum(seq == mask_key).item() # ? 
+    total_to_mask = torch.sum(seq == mask_key).item()
     uniform_dist = torch.where(seq == mask_key, 1., 0.)
     uniform_dist = uniform_dist / torch.linalg.norm(uniform_dist)
     
     # Gibbs sampling
     for n in range(num_steps):
         
-        # Calc masking rate according to paper
+        # Calc masking rate and temperature
+        temp = temp_max + n*((temp_min - temp_max)/(num_steps)) 
         mask_prob = max(alpha_min,
                         alpha_max -
                         ((n*(alpha_max - alpha_min)) / (neta*num_steps))
@@ -148,8 +149,6 @@ def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.te
         
         for i in range(block_size):
             seq[idx[i]] = torch.multinomial(probs[i], 1)
-            
-        print(n, block_size)
         
     return seq
 
