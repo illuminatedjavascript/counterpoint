@@ -21,8 +21,9 @@ class Sampler():
         self.save_path = save_path
         
         model.eval()
-        self._gen_fugues_autoreg('./data/processed/fugue16sep64len_prompts.json', 6)
-        #self._test_set(50)
+        #self._gen_fugues_random(12)
+        #self._gen_fugues_prompt('./data/processed/fugue16sep64len_prompts.json', 16)
+        self._test_set(10)
         
     def _test_set(self, num_samples: int):
         """Internal function for generating, processing, and saving samples from test set.
@@ -54,12 +55,12 @@ class Sampler():
 
             print(f'Completed {i}/{num_samples}')
 
-    def _gen_fugues_random(self, load_path: str, num_bars: int):
+    def _gen_fugues_random(self, num_bars: int):
         """Internal function for generating a full length fugues.
         Args:
             num_bars: the number of bars to be added to the original prompt.
         """
-        def _gen_fugue(model: ChoraleBertModel, dataset: ChoraleDataset, prompt: list, num_bars: int):
+        def _gen_fugue(model: ChoraleBertModel, dataset: ChoraleDataset, num_bars: int):
             """Given a the start of a fugue, complete it by adding num_bars more bars."""
             # Gibbs hyperparams
             alpha_max = 1. 
@@ -67,25 +68,21 @@ class Sampler():
             num_steps = 200 
             neta = 0.75
             temp_max = 1.
-            temp_min = 0.5
+            temp_min = 0.6
 
             TOKENS_PER_BAR = 5*16
             MASK_PER_BAR = 4*16
             MASKED_BAR = (['<T>'] + ['<M>']*4)*16
             PAD_BAR = (['<P>']*5)*16
 
-            res = prompt.copy()[:2*TOKENS_PER_BAR] + MASKED_BAR*num_bars + ['<E>'] + PAD_BAR
+            res =  MASKED_BAR*num_bars + ['<E>'] + PAD_BAR
             
             for n in range(num_steps):
                 for _ in range(num_bars):
                     # Chose random bar number to resample
-                    mid_bar_num = random.randint(0, num_bars-1)
+                    mid_bar_num = random.randint(0, num_bars-3)
                     
-                    if mid_bar_num == 0: # Case: two prompt bars included
-                        total_to_mask = MASK_PER_BAR*2
-                    elif mid_bar_num == 1: # Case: one prompt bar included
-                        total_to_mask = MASK_PER_BAR*3
-                    elif mid_bar_num == num_bars-1: # Case: one pad bar included
+                    if mid_bar_num == num_bars-3: # Case: one pad bar included
                         total_to_mask = MASK_PER_BAR*3
                     else: # Case: no prompt or pad bars included 
                         total_to_mask = MASK_PER_BAR*4
@@ -100,7 +97,7 @@ class Sampler():
                     block_size = max(1, math.trunc(mask_prob * total_to_mask))
                     
                     # Get bar for resampling 
-                    if mid_bar_num == num_bars-1: # Case: there is padding at the end
+                    if mid_bar_num == num_bars-3: # Case: there is padding at the end
                         resample_bar = res[(mid_bar_num)*TOKENS_PER_BAR: (mid_bar_num + 4)*TOKENS_PER_BAR + 1]
                     else: # Case: no padding
                         resample_bar = res[(mid_bar_num)*TOKENS_PER_BAR: (mid_bar_num + 4)*TOKENS_PER_BAR] + ['<E>']
@@ -137,17 +134,13 @@ class Sampler():
             mask_key = dataset.token_to_key['<M>']
 
             # Generate idx sampling distribution
-            if mid_bar_num == 0:
-                uniform_dist = torch.tensor([0.]*TOKENS_PER_BAR*2 + EQ_CHORD*(CHORD_PER_BAR*2) + [0.])
-            elif mid_bar_num == 1:
-                uniform_dist = torch.tensor([0.]*TOKENS_PER_BAR + EQ_CHORD*(CHORD_PER_BAR*3) + [0.])
-            elif mid_bar_num == num_bars-1:
+            if mid_bar_num == num_bars-3:
                 uniform_dist = torch.tensor(EQ_CHORD*(CHORD_PER_BAR*3) + [0.]*TOKENS_PER_BAR + [0.])
             else:
                 uniform_dist = torch.tensor(EQ_CHORD*(CHORD_PER_BAR*4) + [0.]) 
 
             uniform_dist = uniform_dist / torch.linalg.norm(uniform_dist)
-
+            
             # Gibbs sample step
             idx = torch.multinomial(uniform_dist, block_size, replacement=False)
             seq[idx] = mask_key
@@ -163,15 +156,12 @@ class Sampler():
         model = self.model
         save_path = self.save_path
         
-        with open(load_path) as f:
-            prompts = json.load(f)
-            
-        for i, prompt in enumerate(prompts):
-            res = _gen_fugue(model, dataset, prompt, num_bars)
+        for i in range(10):
+            res = _gen_fugue(model, dataset, num_bars)
             to_midi(res, os.path.join(save_path, f'f{i+1}.midi'))
-            print(f'Finished {i+1}/{len(prompts)}')
+            print(f'Finished {i+1}/{10}')
             
-    def _gen_fugues_autoreg(self, load_path: str, num_bars: int):
+    def _gen_fugues_prompt(self, load_path: str, num_bars: int):
         """Internal function for generating a full length fugues.
         Args:
             num_bars: the number of bars to be added to the original prompt.
@@ -238,7 +228,7 @@ def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.te
 
     # Hyperparams for tempertature scaling
     temp_max = 1.
-    temp_min = 0.75
+    temp_min = 0.6
 
     seq = torch.clone(seq) 
     mask_key = dataset.token_to_key['<M>']
