@@ -18,6 +18,7 @@ class Trainer():
         self.dataset = dataset
         self.loss_fn = nn.CrossEntropyLoss()
         self.optimiser = torch.optim.Adam(model.parameters(), lr=lr)
+        self.scaler = torch.cuda.amp.GradScaler()
 
     def train(self, num_epochs: int, batch_size: int):
         """Train loop for BertChoraleModel.
@@ -43,12 +44,16 @@ class Trainer():
 
         with Bar('Training epoch...', max=len(loader)) as bar:
             for src, tgt in loader:
-                pred = self.model.forward(src)
-                # nn.CrossEntropyLoss requires pred shape (#batches, #classes, seq_len)
-                loss = self.loss_fn(pred.transpose(1, 2), tgt) 
+                with torch.autocast(device_type='cuda', dtype=torch.float16):
+                    pred = self.model.forward(src)
+                    loss = self.loss_fn(pred.transpose(1, 2), tgt) # See loss_fn docs
+
+                # See - https://pytorch.org/tutorials/recipes/recipes/amp_recipe.html
+                self.scaler.scale(loss).backward()
+                self.scaler.step(self.optimiser)
+                self.scaler.update()
                 self.optimiser.zero_grad()
-                loss.backward()
-                self.optimiser.step()
+
                 bar.next()
         
         return loss.item()
