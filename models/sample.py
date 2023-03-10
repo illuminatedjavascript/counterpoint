@@ -21,9 +21,9 @@ class Sampler():
         self.save_path = save_path
         
         model.eval()
-        #self._gen_fugues_random(12)
-        #self._gen_fugues_prompt('./data/processed/fugue16sep64len_prompts.json', 16)
-        self._test_set(10)
+        self._gen_fugues_random(12)
+        #self._gen_fugues_prompt('./data/processed/fugue16sep64len_prompts.json', 12)
+        #self._test_set(10)
         
     def _test_set(self, num_samples: int):
         """Internal function for generating, processing, and saving samples from test set.
@@ -65,10 +65,10 @@ class Sampler():
             # Gibbs hyperparams
             alpha_max = 1. 
             alpha_min = 0.05
-            num_steps = 200 
+            num_steps = 200
             neta = 0.75
             temp_max = 1.
-            temp_min = 0.6
+            temp_min = 0.7
 
             TOKENS_PER_BAR = 5*16
             MASK_PER_BAR = 4*16
@@ -228,7 +228,7 @@ def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.te
 
     # Hyperparams for tempertature scaling
     temp_max = 1.
-    temp_min = 0.6
+    temp_min = 0.7
 
     seq = torch.clone(seq) 
     mask_key = dataset.token_to_key['<M>']

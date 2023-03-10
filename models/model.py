@@ -18,7 +18,7 @@ class ChoraleBertConfig():
         
         # Model hyperparameters
         self.n_layers = 4
-        self.n_heads = 16
+        self.n_heads = 32
         self.emb_dim = 512
         self.ff_dim = 4*self.emb_dim 
         
