@@ -17,9 +17,9 @@ class ChoraleBertConfig():
         self.device = dataset.device
         
         # Model hyperparameters
-        self.n_layers = 4
-        self.n_heads = 32
-        self.emb_dim = 512
+        self.n_layers = 8
+        self.n_heads = 22
+        self.emb_dim = 528
         self.ff_dim = 4*self.emb_dim 
         
 class ChoraleBertModel(nn.Module):
@@ -36,8 +36,8 @@ class ChoraleBertModel(nn.Module):
 
         # Transformer
         self.encoder_layer = nn.TransformerEncoderLayer(config.emb_dim, config.n_heads, config.ff_dim, 
-                                                        batch_first=True) # Add dropout?
-        self.encoder = nn.TransformerEncoder(self.encoder_layer, config.n_layers) # Add norm (look at docs)?
+                                                        dropout=0., batch_first=True) 
+        self.encoder = nn.TransformerEncoder(self.encoder_layer, config.n_layers) 
         
     def forward(self, seq: torch.tensor):
         """Forward pass for model.

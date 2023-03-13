@@ -14,7 +14,7 @@ class ChoraleDataset(data.Dataset):
         device: device for PyTorch tensors.
     """
     def __init__(self, load_path: str, pitch_aug_range: int = 6, max_mask: float = 0.9,
-                 tt_split: float = 0.95, device: str = 'cpu'):
+                 tt_split: float = 0.90, device: str = 'cpu'):
         self.pitch_aug_range = pitch_aug_range
         self.max_mask = max_mask
         self.device = device
