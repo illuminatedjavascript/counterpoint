@@ -21,9 +21,8 @@ class Sampler():
         self.save_path = save_path
         
         model.eval()
-        self._gen_fugues_random(12)
         #self._gen_fugues_prompt('./data/processed/fugue16sep64len_prompts.json', 12)
-        #self._test_set(10)
+        self._test_set(10)
         
     def _test_set(self, num_samples: int):
         """Internal function for generating, processing, and saving samples from test set.
@@ -35,7 +34,6 @@ class Sampler():
         save_path = self.save_path
     
         for i in range(1, num_samples):
-            # Get src not containing padding
             src, tgt = dataset.sample_test()
             src_dec = dataset.decode(src)
             tgt_dec = dataset.decode(tgt)
@@ -55,112 +53,6 @@ class Sampler():
 
             print(f'Completed {i}/{num_samples}')
 
-    def _gen_fugues_random(self, num_bars: int):
-        """Internal function for generating a full length fugues.
-        Args:
-            num_bars: the number of bars to be added to the original prompt.
-        """
-        def _gen_fugue(model: ChoraleBertModel, dataset: ChoraleDataset, num_bars: int):
-            """Given a the start of a fugue, complete it by adding num_bars more bars."""
-            # Gibbs hyperparams
-            alpha_max = 1. 
-            alpha_min = 0.05
-            num_steps = 200
-            neta = 0.75
-            temp_max = 1.
-            temp_min = 0.7
-
-            TOKENS_PER_BAR = 5*16
-            MASK_PER_BAR = 4*16
-            MASKED_BAR = (['<T>'] + ['<M>']*4)*16
-            PAD_BAR = (['<P>']*5)*16
-
-            res =  MASKED_BAR*num_bars + ['<E>'] + PAD_BAR
-            
-            for n in range(num_steps):
-                for _ in range(num_bars):
-                    # Chose random bar number to resample
-                    mid_bar_num = random.randint(0, num_bars-3)
-                    
-                    if mid_bar_num == num_bars-3: # Case: one pad bar included
-                        total_to_mask = MASK_PER_BAR*3
-                    else: # Case: no prompt or pad bars included 
-                        total_to_mask = MASK_PER_BAR*4
-                        
-                    # Calculate Gibbs samplying params
-                    mask_prob = max(alpha_min,
-                                    alpha_max -
-                                    ((n*(alpha_max - alpha_min)) / (neta*num_steps))
-                                    )
-
-                    temp = temp_max + n*((temp_min - temp_max)/(num_steps)) 
-                    block_size = max(1, math.trunc(mask_prob * total_to_mask))
-                    
-                    # Get bar for resampling 
-                    if mid_bar_num == num_bars-3: # Case: there is padding at the end
-                        resample_bar = res[(mid_bar_num)*TOKENS_PER_BAR: (mid_bar_num + 4)*TOKENS_PER_BAR + 1]
-                    else: # Case: no padding
-                        resample_bar = res[(mid_bar_num)*TOKENS_PER_BAR: (mid_bar_num + 4)*TOKENS_PER_BAR] + ['<E>']
-                    
-                    resample_bar[0] = '<S>'
-                    resample_bar_enc = dataset._encode(resample_bar)
-
-                    # Gibbs step
-                    gibbs_bar_enc = gibbs_step(model, dataset, temp, block_size, resample_bar_enc, mid_bar_num, num_bars)
-                    gibbs_bar_dec = dataset.decode(gibbs_bar_enc)
-                    
-                    # Reformat
-                    if mid_bar_num != 0:
-                        gibbs_bar_dec[0] = '<T>' # Revert <S> back to <T>
-                    gibbs_bar_dec.pop() # Remove <E> tag 
-
-                    # Insert into res
-                    res[(mid_bar_num)*TOKENS_PER_BAR: (mid_bar_num + 4)*TOKENS_PER_BAR] = gibbs_bar_dec
-                
-                print(f'{n+1}/{num_steps} steps completed.')
-
-            return res
-        
-        def gibbs_step(model: ChoraleBertModel, dataset: ChoraleDataset,
-                       temp: float, block_size: int, seq: torch.tensor,
-                       mid_bar_num: int, num_bars: int):
-            """Performs a single gibbs step according to the parameters. Note
-            only works with 64len."""
-            TOKENS_PER_BAR = 5*16
-            CHORD_PER_BAR = 16
-            EQ_CHORD = [0., 1., 1., 1., 1.]
-
-            seq = torch.clone(seq) 
-            mask_key = dataset.token_to_key['<M>']
-
-            # Generate idx sampling distribution
-            if mid_bar_num == num_bars-3:
-                uniform_dist = torch.tensor(EQ_CHORD*(CHORD_PER_BAR*3) + [0.]*TOKENS_PER_BAR + [0.])
-            else:
-                uniform_dist = torch.tensor(EQ_CHORD*(CHORD_PER_BAR*4) + [0.]) 
-
-            uniform_dist = uniform_dist / torch.linalg.norm(uniform_dist)
-            
-            # Gibbs sample step
-            idx = torch.multinomial(uniform_dist, block_size, replacement=False)
-            seq[idx] = mask_key
-            logits = model.forward(seq.reshape(1, -1)) / temp # Shape (1, seq_len, vocab_len)
-            probs = torch.nn.functional.softmax(logits[0, idx, :], dim=1) # Shape (block_size, vocab_len)
-            
-            for i in range(block_size):
-                seq[idx[i]] = torch.multinomial(probs[i], 1)
-
-            return seq
-
-        dataset = self.dataset
-        model = self.model
-        save_path = self.save_path
-        
-        for i in range(10):
-            res = _gen_fugue(model, dataset, num_bars)
-            to_midi(res, os.path.join(save_path, f'f{i+1}.midi'))
-            print(f'Finished {i+1}/{10}')
-            
     def _gen_fugues_prompt(self, load_path: str, num_bars: int):
         """Internal function for generating a full length fugues.
         Args:
@@ -172,17 +64,17 @@ class Sampler():
             MASKED_BAR = (['<T>'] + ['<M>']*4)*16
             PAD_BAR = (['<P>']*5)*16
             
-            res = prompt.copy()[:3*tokens_per_bar]
+            res = prompt.copy()[:4*tokens_per_bar]
 
             # First iter
-            curr = res.copy()[:3*tokens_per_bar] + MASKED_BAR + ['<E>']
+            curr = ['<S>'] + res.copy()[1*tokens_per_bar + 1:4*tokens_per_bar] + MASKED_BAR + ['<E>']
             curr_enc = dataset._encode(curr)
             curr_comp_enc = gibbs_sample(model, dataset, curr_enc)
             curr_comp_dec = dataset.decode(curr_comp_enc)
             res = res + curr_comp_dec[tokens_per_bar*3:tokens_per_bar*4]
-            
+
             # Add all apart from last bar
-            for i in range(1, num_bars-1):
+            for i in range(2, num_bars-1):
                 curr = ['<S>'] + res.copy()[i*tokens_per_bar + 1: (i+3)*tokens_per_bar] + MASKED_BAR + ['<E>']
                 curr_enc = dataset._encode(curr)
                 curr_comp_enc = gibbs_sample(model, dataset, curr_enc)
@@ -210,7 +102,7 @@ class Sampler():
             to_midi(res, os.path.join(save_path, f'f{i+1}.midi'))
             print(f'Finished {i+1}/{len(prompts)}')
             
-
+@torch.autocast(device_type='cuda', dtype=torch.float16)
 def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.tensor):
     """Generates samples according to a simplistic gibbs sampling procedure.
     Args:
@@ -223,12 +115,12 @@ def gibbs_sample(model: ChoraleBertModel, dataset: ChoraleDataset, seq: torch.te
     # Hyperparams from 'Counterpoint by Convolution' paper
     alpha_max = 1. 
     alpha_min = 0.05
-    num_steps = 200
+    num_steps = 250
     neta = 0.75
 
     # Hyperparams for tempertature scaling
     temp_max = 1.
-    temp_min = 0.7
+    temp_min = 0.65
 
     seq = torch.clone(seq) 
     mask_key = dataset.token_to_key['<M>']
