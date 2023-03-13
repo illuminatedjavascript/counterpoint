@@ -1,3 +1,4 @@
+from collections import deque
 import torch
 from torch import nn as nn
 from torch.utils.data import DataLoader
@@ -27,11 +28,25 @@ class Trainer():
             batch_size: size of each batch.
         """
         loader = DataLoader(self.dataset, batch_size, shuffle=True)
+        loss_queue = deque(maxlen=25)
+        prev_rolling_loss = 10 # Arbitrary choice
         for epoch in range(num_epochs):
-            loss = self._train_epoch(loader)
+            train_loss = self._train_epoch(loader)
+            test_loss = self.test_loss()
+            loss_queue.append(test_loss)
+            
+            # Calculating rollings loss
+            rolling_loss = 0
+            for l in loss_queue:
+                rolling_loss += (l / len(loss_queue))
+            delta_r_loss = prev_rolling_loss - rolling_loss
+                
             print(f'Epoch {epoch+1} / {num_epochs} complete:')
-            print(f'Last batch train loss = {loss}.')
-            print(f'Test loss = {self.test_loss()}.')
+            print(f'Last batch train loss = {train_loss}.')
+            print(f'Test loss = {test_loss}.')
+            print(f'Rolling loss = {rolling_loss} with delta = {delta_r_loss}')
+            
+            prev_rolling_loss = rolling_loss
             
     def _train_epoch(self, loader):
         """Trains epoch & returns loss for last batch.
