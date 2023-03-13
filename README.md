@@ -26,13 +26,17 @@ pip install progress
 
 ### Usage
 
-If you want to generate your own fugue samples, you do this via the command: 
+If you want access to the pre-trained parameters, message me and I'll send you a download link (~150mb file). Otherwise, you may train the model yourself by executing the command: 
+```
+python run.py train -p params.txt
+```
+Once you have the parameters, you may sample from the model by executing the command:
 
 ```
-python run.py sample -p fugue_16div64sep_8-22-528-4.txt
+python run.py sample -p fugue_params.txt -s data/output
 ```
 
-Note that the current iteration of the model has ~17m parameters. As such, training and sampling may fail if your machine doesn't have enough RAM/VRAM. The model was trained and sampled on a Tesla V100 16GB.
+Note that the current iteration of the model has ~30m parameters. As such, training and sampling may fail if your machine doesn't have enough RAM/VRAM. The model was trained and sampled on a Tesla V100 16GB.
 
 ### References
 
